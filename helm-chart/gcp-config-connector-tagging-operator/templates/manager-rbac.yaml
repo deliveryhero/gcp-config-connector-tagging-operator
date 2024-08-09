@@ -1,0 +1,66 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: gcp-config-connector-tagging-operator-manager-role
+  labels:
+  {{- include "gcp-config-connector-tagging-operator.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - kms.cnrm.cloud.google.com
+  resources:
+  - kmskeyrings
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - redis.cnrm.cloud.google.com
+  resources:
+  - redisinstances
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - sql.cnrm.cloud.google.com
+  resources:
+  - sqlinstances
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - storage.cnrm.cloud.google.com
+  resources:
+  - storagebuckets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - tags.cnrm.cloud.google.com
+  resources:
+  - tagslocationtagbindings
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: gcp-config-connector-tagging-operator-manager-rolebinding
+  labels:
+  {{- include "gcp-config-connector-tagging-operator.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: gcp-config-connector-tagging-operator-manager-role
+subjects:
+- kind: ServiceAccount
+  name: gcp-config-connector-tagging-operator-controller-manager
+  namespace: '{{ .Release.Namespace }}'

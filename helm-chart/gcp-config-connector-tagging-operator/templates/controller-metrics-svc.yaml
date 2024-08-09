@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: gcp-config-connector-tagging-operator-controller-metrics-svc
+  labels:
+    control-plane: controller-manager
+  {{- include "gcp-config-connector-tagging-operator.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.controllerMetricsSvc.type }}
+  selector:
+    control-plane: controller-manager
+  {{- include "gcp-config-connector-tagging-operator.selectorLabels" . | nindent 4 }}
+  ports:
+	{{- .Values.controllerMetricsSvc.ports | toYaml | nindent 2 }}
