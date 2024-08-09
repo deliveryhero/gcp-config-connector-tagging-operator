@@ -1,0 +1,34 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manager-role
+rules:
+- apiGroups:
+  - kms.cnrm.cloud.google.com
+  resources:
+  - kmskeyrings
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - storage.cnrm.cloud.google.com
+  resources:
+  - storagebuckets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - tags.cnrm.cloud.google.com
+  resources:
+  - tagslocationtagbindings
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
