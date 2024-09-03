@@ -11,7 +11,7 @@ steps:
   - name: lint
     image: golangci/golangci-lint:v1.60.3
     commands:
-      - golangci-lint -c .golangci.yaml run
+      - golangci-lint -c .golangci.yml run
 
 ---
 kind: pipeline
