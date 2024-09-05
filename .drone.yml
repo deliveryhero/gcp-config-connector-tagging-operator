@@ -62,9 +62,7 @@ steps:
     commands:
       - apk add git
       - git config credential.helper '!f() { echo username=deliveryhero-bot; echo "password=$GITHUB_TOKEN"; };f'
-      - cp -r .github/semantic-release/. .
-      - npm i
-      - npx semantic-release
+      - npx semantic-release@latest
 
 ---
 kind: pipeline
@@ -90,12 +88,3 @@ steps:
         - latest
       json_key:
         from_secret: DP_ARTIFACT_REGISTRY_JSON_KEY
-
-  - name: github-release
-    image: plugins/github-release
-    settings:
-      title: GCP Config Connector Tagging Operator
-      api_key:
-        from_secret: GH_READ_TOKEN
-      note: /drone/src/CHANGELOG.md
-      overwrite: true
