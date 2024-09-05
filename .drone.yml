@@ -1,40 +1,39 @@
----
 kind: pipeline
 type: docker
-name: lint
+name: push
 
 trigger:
   event:
+    - push
     - pull_request
 
 steps:
   - name: lint
     image: golangci/golangci-lint:v1.60.3
+    environment:
+      GH_TOKEN:
+        from_secret: GH_READ_TOKEN
     commands:
-      - golangci-lint -c .golangci.yml run
-
----
-kind: pipeline
-type: docker
-name: test
-
-trigger:
-  event:
-    - pull_request
-
-features:
-  docker-daemon@v1:
-    enabled: true
-
-steps:
-  - name: test
-    image: golang:1.22-alpine
-    commands:
-      - apk add --no-cache make bash
-      - make test
+      - echo "machine github.com login ${GH_USER} password ${GH_TOKEN}" >> $HOME/.netrc
+      - golangci-lint run --timeout 600s --verbose ./...
+      - rm $HOME/.netrc
+    when:
+      paths:
+        include:
+          - "**/*.go"
     depends_on:
       - clone
 
+  - name: test
+    image: golang:1.22
+    commands:
+      - make test || exit 1
+    depends_on:
+      - clone
+    when:
+      paths:
+        include:
+          - "**/*.go"
 ---
 kind: pipeline
 type: docker
