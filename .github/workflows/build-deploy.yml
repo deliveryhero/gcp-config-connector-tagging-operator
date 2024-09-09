@@ -81,7 +81,3 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: ${{ secrets.DOCKER_REGISTRY }}/gcp-config-connector-tagging-operator:${{ steps.semantic.outputs.new_release_version }}
-          # Prepare authentication for Google Container Registry
-          # See: https://github.com/docker/login-action
-          username: _json_key
-          password: ${{ secrets.DP_ARTIFACT_REGISTRY_JSON_KEY }}
