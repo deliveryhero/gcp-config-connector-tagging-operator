@@ -60,7 +60,6 @@ steps:
       GIT_AUTHOR_EMAIL: bot.cicd.ext@deliveryhero.com
     commands:
       - apk add git
-      - git config credential.helper '!f() { echo username=deliveryhero-bot; echo "password=$GITHUB_TOKEN"; };f'
       - npx semantic-release@latest
 
 ---
