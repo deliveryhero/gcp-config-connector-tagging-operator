@@ -80,5 +80,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: gcp-config-connector-tagging-operator:v1.0.0
+          tags: gcp-config-connector-tagging-operator:v1.1.0
+          secrets: |
+            "github_token=${{ secrets.GITHUB_TOKEN }}"
           # ${{ steps.semantic.outputs.new_release_version }}
