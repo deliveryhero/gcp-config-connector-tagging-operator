@@ -80,5 +80,5 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ secrets.DOCKER_REGISTRY }}/gcp-config-connector-tagging-operator:v1.0.0
+          tags: gcp-config-connector-tagging-operator:v1.0.0
           # ${{ steps.semantic.outputs.new_release_version }}
