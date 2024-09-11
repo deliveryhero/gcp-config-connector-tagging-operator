@@ -52,7 +52,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 16
-      - name: Semantic Release
+      - name: semantic
         uses: cycjimmy/semantic-release-action@v3
         id: semantic
         with:
@@ -74,10 +74,11 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker image
-        if: steps.semantic.outputs.new_release_published == 'true'
+        # if: steps.semantic.outputs.new_release_published == 'true'
         uses: docker/build-push-action@v4
         with:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ secrets.DOCKER_REGISTRY }}/gcp-config-connector-tagging-operator:${{ steps.semantic.outputs.new_release_version }}
+          tags: ${{ secrets.DOCKER_REGISTRY }}/gcp-config-connector-tagging-operator:v1.0.0
+          # ${{ steps.semantic.outputs.new_release_version }}
