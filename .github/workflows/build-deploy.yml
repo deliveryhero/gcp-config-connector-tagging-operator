@@ -41,8 +41,9 @@ jobs:
     needs: [test] #lint should be placed back
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      packages: write
+      write-all
+      # contents: write
+      # packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
