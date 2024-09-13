@@ -1,4 +1,4 @@
-name: Build And Deploy
+name: Build And Deploy GCP CC Tagging Operator
 
 on:
   push:
@@ -7,6 +7,7 @@ on:
     branches: ["main"]
 env:
   REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   # lint:
@@ -40,33 +41,17 @@ jobs:
     name: Release
     needs: [test] #lint should be placed back
     runs-on: ubuntu-latest
+    # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
     permissions:
-      write-all
-      # contents: write
-      # packages: write
+      contents: write
+      packages: write
+      attestations: write
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 16
-      - name: semantic
-        uses: cycjimmy/semantic-release-action@v3
-        id: semantic
-        with:
-          extra_plugins: |
-            @semantic-release/changelog
-            @semantic-release/git
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GIT_COMMITTER_NAME: deliveryhero-bot
-          GIT_COMMITTER_EMAIL: bot.cicd.ext@deliveryhero.com
-          GIT_AUTHOR_NAME: deliveryhero-bot
-          GIT_AUTHOR_EMAIL: bot.cicd.ext@deliveryhero.com
-
       - name: Log in to the Container registry
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
         with:
@@ -74,14 +59,47 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      # Create a semantic-release configuration file dynamically
+      - name: Create semantic-release config
+        run: |
+          echo '{
+            "branches": ["master"],
+            "plugins": [
+              "@semantic-release/commit-analyzer",
+              "@semantic-release/release-notes-generator",
+              "@semantic-release/changelog",
+              "@semantic-release/git"
+            ]
+          }' > .releaserc.json
+
+      - name: Semantic Release
+        uses: cycjimmy/semantic-release-action@v3
+        id: semantic
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build and push Docker image
-        # if: steps.semantic.outputs.new_release_published == 'true'
-        uses: docker/build-push-action@v4
+        if: steps.semantic.outputs.new_release_published == 'true'
+        id: push
+        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
         with:
           context: .
-          file: ./Dockerfile
           push: true
-          tags: gcp-config-connector-tagging-operator:v1.1.0
-          secrets: |
-            "github_token=${{ secrets.GITHUB_TOKEN }}"
-          # ${{ steps.semantic.outputs.new_release_version }}
+          # Use the version from semantic-release as the tag
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.semantic.outputs.new_release_version }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      # This step generates an artifact attestation for the image, which is an unforgeable statement about where and how it was built. It increases supply chain security for people who consume the image. For more information, see "[AUTOTITLE](/actions/security-guides/using-artifact-attestations-to-establish-provenance-for-builds)."
+      - name: Generate Artifact Attestation
+        if: steps.semantic.outputs.new_release_published == 'true'
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
