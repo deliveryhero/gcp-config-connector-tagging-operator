@@ -2,11 +2,11 @@
 
 [![dh](./img/dh-logo.png)](#)
 
-// TODO(user): Add simple overview of use/purpose
+gcp-config-connector-tagging-operator helps you to add tags to GCP resources managed by the config-connector controller.
 
 ## Description
 
-// TODO(user): An in-depth paragraph about your project and overview of use
+We at Delivery Hero have requirements to limit access to the GCP resources based on tags with Config Connector (implementing [ABAC](https://cloud.google.com/iam/docs/tags-access-control) access control). Even though tag key and value creation works as expected there are a few bugs that prevent us from fully adopting tag implementation with KCC.
 
 ## Getting Started
 
@@ -98,15 +98,10 @@ kubectl apply -f https://raw.githubusercontent.com/<org>/gcp-config-connector-ta
 
 ## Contributing
 
-// TODO(user): Add detailed information on how you would like others to contribute to this project
-
+To contribute, please read our [contributing docs](CONTRIBUTING.md).
 **NOTE:** Run `make help` for more information on all potential `make` targets
 
 More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
-
-## Contributing
-
-To contribute, please read our [contributing docs](CONTRIBUTING.md).
 
 ## License
 
