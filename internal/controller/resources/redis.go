@@ -30,9 +30,6 @@ var _ controller.ResourceMetadataProvider[redisv1beta1.RedisInstance] = &RedisIn
 type RedisInstanceMetadataProvider struct{}
 
 func (in *RedisInstanceMetadataProvider) GetResourceLocation(r *redisv1beta1.RedisInstance) string {
-	if r.Spec.Region == "" {
-		return ""
-	}
 	return r.Spec.Region
 }
 
