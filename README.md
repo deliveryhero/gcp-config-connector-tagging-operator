@@ -6,7 +6,10 @@ gcp-config-connector-tagging-operator helps you to add tags to GCP resources man
 
 ## Description
 
-We at Delivery Hero have requirements to limit access to the GCP resources based on tags with Config Connector (implementing [ABAC](https://cloud.google.com/iam/docs/tags-access-control) access control). Even though tag key and value creation works as expected there are a few bugs that prevent us from fully adopting tag implementation with KCC.
+We at Delivery Hero have requirements to limit access to the GCP resources based on tags with Config Connector (implementing [ABAC](https://cloud.google.com/iam/docs/tags-access-control)).
+To do this with our Kubernetes-centric setup, leveraging [the GCP config-connector project](https://github.com/GoogleCloudPlatform/k8s-config-connector), we needed a way to dynamically create and update the tag values in a project - even if the same value is used in more than one namespace or cluster.
+This project helps solve this issue by adding a layer on top that can sync tag keys and values in GCP from Kubernetes labels, and then take care of generating the necessary tag binding config-connector resources.
+In the end, this gives you an auto-magical experience for tags similar to how Kubernetes labels are also automatically made available as resource labels by config-connector.
 
 ## Getting Started
 
