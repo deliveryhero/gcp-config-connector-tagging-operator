@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/deliveryhero/gcp-config-connector-tagging-operator/compare/v1.0.0...v1.1.0) (2024-09-23)
+
+
+### Features
+
+* PAI-2183: Add-helm-templating ([#2](https://github.com/deliveryhero/gcp-config-connector-tagging-operator/issues/2)) ([451b987](https://github.com/deliveryhero/gcp-config-connector-tagging-operator/commit/451b987984ef04336cc272c0a3e4048cd8d89cb6))
+
 # 1.0.0 (2024-09-13)
 
 
