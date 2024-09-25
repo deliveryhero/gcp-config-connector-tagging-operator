@@ -1,5 +1,11 @@
-# Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+# Applicaiton name
+APP_NAME ?= gcp-config-connector-tagging-operator
+# Application Version
+APP_VERSION ?= latest
+#Image Repo
+IMG_REPO ?= controller
+# # Image URL to use all building/pushing image targets
+IMG ?= $(IMG_REPO):$(APP_VERSION)
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.30.0
 
@@ -128,11 +134,13 @@ endif
 
 .PHONY: install
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build config/crd | $(KUBECTL) apply -f -
+	## No CRDs packaged, so skip this
+	#$(KUSTOMIZE) build config/crd | $(KUBECTL) apply -f -
 
 .PHONY: uninstall
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(KUSTOMIZE) build config/crd | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
+	## No CRDs packaged, so skip this
+	#$(KUSTOMIZE) build config/crd | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: deploy
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
@@ -198,3 +206,15 @@ mv $(1) $(1)-$(3) ;\
 } ;\
 ln -sf $(1)-$(3) $(1)
 endef
+
+#Helmify 
+HELMIFY ?= $(LOCALBIN)/helmify
+
+.PHONY: helmify
+helmify: $(HELMIFY) ## Download helmify locally if necessary.
+$(HELMIFY): $(LOCALBIN)
+	test -s $(LOCALBIN)/helmify || GOBIN=$(LOCALBIN) go install github.com/arttor/helmify/cmd/helmify@latest
+    
+helm: manifests kustomize helmify
+	cd config/manager && $(KUSTOMIZE) edit set image $(IMG_REPO)=$(IMG)
+	$(KUSTOMIZE) build config/default | $(HELMIFY) -original-name helm-chart/$(APP_NAME)
