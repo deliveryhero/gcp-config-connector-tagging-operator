@@ -1,6 +1,6 @@
 # Delivery Hero Helm Charts & Docker Images Security
 
-Delivery hero hosts the helm charts available in this repository and the docker images of the application are hosted on [GHCR](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry).
+Delivery Hero hosts the Helm charts and the Docker images of the application available in this repository on [GHCR](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry).
 
 ## Reporting Security Issues
 

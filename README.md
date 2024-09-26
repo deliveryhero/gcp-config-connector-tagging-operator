@@ -10,6 +10,9 @@ At Delivery Hero, we have requirements to limit access to GCP resources based on
 
 This project helps solve this issue by adding a layer that syncs tag keys and values in GCP from Kubernetes labels. It then generates the necessary tag binding Config Connector resources, providing an automagical experience for tags, similar to how Kubernetes labels are automatically made available as resource labels by Config Connector.
 
+> **Note:** This operator requires the `TagsLocationTagBinding` CRD from the Config Connector Operator. This CRD might need to be installed manually, as it is only available at the v1alpha1 level currently. You can find instructions on how to install it [here](https://cloud.google.com/config-connector/docs/how-to/install-alpha-crds).
+
+
 ## Getting Started
 
 ### Prerequisites
@@ -17,7 +20,7 @@ This project helps solve this issue by adding a layer that syncs tag keys and va
 - Go version v1.22.0+
 - Docker version 17.03+
 - Kubectl version v1.11.3+
-- Access to a Kubernetes v1.11.3+ cluster
+- Access to a Kubernetes v1.11.3+ cluster with Config Connector v1.121.0+ installed.
 
 ### Deploying on the Cluster Using Helm
 
