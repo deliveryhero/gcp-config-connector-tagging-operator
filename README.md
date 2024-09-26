@@ -20,7 +20,7 @@ This project helps solve this issue by adding a layer that syncs tag keys and va
 - Go version v1.22.0+
 - Docker version 17.03+
 - Kubectl version v1.11.3+
-- Access to a Kubernetes v1.11.3+ cluster
+- Access to a Kubernetes v1.11.3+ cluster with Config Connector v1.121.0+ installed.
 
 ### Deploying on the Cluster Using Helm
 
