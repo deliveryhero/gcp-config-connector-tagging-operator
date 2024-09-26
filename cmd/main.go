@@ -17,12 +17,10 @@ limitations under the License.
 package main
 
 import (
+	resourcemanager "cloud.google.com/go/resourcemanager/apiv3"
 	"context"
 	"crypto/tls"
 	"flag"
-	"os"
-
-	resourcemanager "cloud.google.com/go/resourcemanager/apiv3"
 	kmsv1beta1 "github.com/GoogleCloudPlatform/k8s-config-connector/pkg/clients/generated/apis/kms/v1beta1"
 	redisv1beta1 "github.com/GoogleCloudPlatform/k8s-config-connector/pkg/clients/generated/apis/redis/v1beta1"
 	sqlv1beta1 "github.com/GoogleCloudPlatform/k8s-config-connector/pkg/clients/generated/apis/sql/v1beta1"
@@ -31,7 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-
+	"os"
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -45,6 +43,7 @@ import (
 	"github.com/deliveryhero/gcp-config-connector-tagging-operator/internal/controller"
 	"github.com/deliveryhero/gcp-config-connector-tagging-operator/internal/controller/resources"
 	"github.com/deliveryhero/gcp-config-connector-tagging-operator/internal/gcp"
+	"github.com/deliveryhero/gcp-config-connector-tagging-operator/internal/util"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -72,6 +71,7 @@ func main() {
 	var probeAddr string
 	var secureMetrics bool
 	var enableHTTP2 bool
+	var targetLabels string
 	var tlsOpts []func(*tls.Config)
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
@@ -83,6 +83,9 @@ func main() {
 		"If set, the metrics endpoint is served securely via HTTPS. Use --metrics-secure=false to use HTTP instead.")
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
+	flag.StringVar(&targetLabels, "target-labels", ".*",
+		"Only create tags for labels that match this regular expression. "+
+			"Defaults to '.*', matching all labels by default.")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -134,6 +137,12 @@ func main() {
 		metricsServerOptions.FilterProvider = filters.WithAuthenticationAndAuthorization
 	}
 
+	labelMatcher, err := util.LimitLabelsWithRegex(targetLabels)
+	if err != nil {
+		setupLog.Error(err, "unable to compile regex for label matching")
+		os.Exit(1)
+	}
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
 		Metrics:                metricsServerOptions,
@@ -176,10 +185,10 @@ func main() {
 		setupLog.Error(err, "unable to setup tag binding index")
 		os.Exit(1)
 	}
-	createTaggableResourceController(mgr, tagsManager, &resources.StorageBucketMetadataProvider{})
-	createTaggableResourceController(mgr, tagsManager, &resources.SQLInstanceMetadataProvider{})
-	createTaggableResourceController(mgr, tagsManager, &resources.RedisInstanceMetadataProvider{})
-	createTaggableResourceController(mgr, tagsManager, &resources.KMSKeyRingMetadataProvider{})
+	createTaggableResourceController(mgr, tagsManager, &resources.StorageBucketMetadataProvider{}, labelMatcher)
+	createTaggableResourceController(mgr, tagsManager, &resources.SQLInstanceMetadataProvider{}, labelMatcher)
+	createTaggableResourceController(mgr, tagsManager, &resources.RedisInstanceMetadataProvider{}, labelMatcher)
+	createTaggableResourceController(mgr, tagsManager, &resources.KMSKeyRingMetadataProvider{}, labelMatcher)
 	// +kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
@@ -198,12 +207,13 @@ func main() {
 	}
 }
 
-func createTaggableResourceController[T any, P controller.ResourceMetadataProvider[T], PT controller.ResourcePointer[T]](mgr ctrl.Manager, tagsManager *gcp.TagsManager, provider P) {
+func createTaggableResourceController[T any, P controller.ResourceMetadataProvider[T], PT controller.ResourcePointer[T]](mgr ctrl.Manager, tagsManager *gcp.TagsManager, provider P, labelMatcher func(map[string]string) map[string]string) {
 	if err := (&controller.TaggableResourceReconciler[T, P, PT]{
 		Client:           mgr.GetClient(),
 		Scheme:           mgr.GetScheme(),
 		TagsManager:      tagsManager,
 		MetadataProvider: provider,
+		LabelMatcher:     labelMatcher,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create taggable resource controller")
 		os.Exit(1)

@@ -42,6 +42,7 @@ type TaggableResourceReconciler[T any, P ResourceMetadataProvider[T], PT Resourc
 	Scheme           *runtime.Scheme
 	TagsManager      *gcp.TagsManager
 	MetadataProvider P
+	LabelMatcher     func(map[string]string) map[string]string
 }
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -74,8 +75,9 @@ func (r *TaggableResourceReconciler[T, P, PT]) Reconcile(ctx context.Context, re
 	}
 
 	var expectedTagValueRefs []string
-	// TODO add option for allowlisting a subset of labels to be turned into tags (e.g. regex of label keys)
-	for k, v := range resource.GetLabels() {
+	labels := resource.GetLabels()
+
+	for k, v := range r.LabelMatcher(labels) {
 		value, err := r.TagsManager.LookupValue(ctx, projectID, k, v)
 		if err != nil {
 			return ctrl.Result{}, err
