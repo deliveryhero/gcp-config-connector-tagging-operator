@@ -13,7 +13,7 @@ func LimitLabelsWithRegex(targetLabels string) (func(map[string]string) map[stri
 	labelMatcher := func(in map[string]string) (out map[string]string) {
 		out = make(map[string]string, len(in))
 		for k, v := range in {
-			if labelRegex.MatchString(v) {
+			if labelRegex.MatchString(k) {
 				out[k] = v
 			}
 		}
