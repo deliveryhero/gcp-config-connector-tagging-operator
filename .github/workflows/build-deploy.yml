@@ -31,7 +31,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v5
         with:
           go-version: "1.23"
           cache: true
@@ -67,29 +67,18 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
       # Create a semantic-release configuration file dynamically
-      - name: Install dependencies
-        run: npm install @semantic-release/exec --save-dev
-
-      # Create a semantic-release configuration file dynamica and not pushing change log to master
       - name: Create semantic-release config
         run: |
           echo '{
-            "branches": ["main"],
             "plugins": [
               "@semantic-release/commit-analyzer",
               "@semantic-release/release-notes-generator",
-              "@semantic-release/github",
-              [
-                "@semantic-release/exec",
-                {
-                  "publishCmd": "echo ::set-output name=new_version::${nextRelease.version}"
-                }
-              ]
+              "@semantic-release/github"
             ]
           }' > .releaserc.json
 
       - name: Semantic Release
-        uses: cycjimmy/semantic-release-action@v3
+        uses: cycjimmy/semantic-release-action@v4
         id: semantic
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
