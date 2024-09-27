@@ -124,3 +124,4 @@ To contribute, please read our [contributing documentation](CONTRIBUTING.md).
 ## License
 
 &copy; 2024 Delivery Hero SE
+Contents of this repository is licensed under the Apache-2.0 [License](LICENSE).
