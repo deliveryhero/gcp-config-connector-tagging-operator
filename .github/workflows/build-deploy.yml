@@ -38,6 +38,7 @@ jobs:
       - name: Test
         run: make test
 
+
   release:
     name: Release Package to GHCR
     needs: [Test] #lint should be placed back
