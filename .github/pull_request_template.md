@@ -7,3 +7,4 @@ Please include a summary of the change, relevant motivation, and context.
 * _chore_: no version bump
 * _fix_: patch version bump, non-breaking change which fixes an issue
 * _feat_: minor version bump, new feature, non-breaking change which adds functionality
+
