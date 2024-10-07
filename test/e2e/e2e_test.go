@@ -17,6 +17,7 @@ limitations under the License.
 package e2e
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"time"
@@ -30,7 +31,12 @@ import (
 const namespace = "gcp-config-connector-tagging-operator-system"
 
 var _ = Describe("controller", Ordered, func() {
+	ctx := context.Background()
+
 	BeforeAll(func() {
+		By("installing config connector")
+		Expect(utils.InstallConfigConnector(ctx)).To(Succeed())
+
 		By("installing prometheus operator")
 		Expect(utils.InstallPrometheusOperator()).To(Succeed())
 
@@ -43,6 +49,9 @@ var _ = Describe("controller", Ordered, func() {
 	})
 
 	AfterAll(func() {
+		By("uninstalling the config connector bundle")
+		Expect(utils.UninstallConfigConnector(ctx)).To(Succeed())
+
 		By("uninstalling the Prometheus manager bundle")
 		utils.UninstallPrometheusOperator()
 
