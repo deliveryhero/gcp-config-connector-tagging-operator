@@ -207,7 +207,7 @@ func main() {
 	}
 }
 
-func createTaggableResourceController[T any, P controller.ResourceMetadataProvider[T], PT controller.ResourcePointer[T]](mgr ctrl.Manager, tagsManager *gcp.TagsManager, provider P, labelMatcher func(map[string]string) map[string]string) {
+func createTaggableResourceController[T any, P controller.ResourceMetadataProvider[T], PT controller.ResourcePointer[T]](mgr ctrl.Manager, tagsManager gcp.TagsManager, provider P, labelMatcher func(map[string]string) map[string]string) {
 	if err := (&controller.TaggableResourceReconciler[T, P, PT]{
 		Client:           mgr.GetClient(),
 		Scheme:           mgr.GetScheme(),

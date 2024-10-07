@@ -40,7 +40,7 @@ type ResourcePointer[T any] interface {
 type TaggableResourceReconciler[T any, P ResourceMetadataProvider[T], PT ResourcePointer[T]] struct {
 	client.Client
 	Scheme           *runtime.Scheme
-	TagsManager      *gcp.TagsManager
+	TagsManager      gcp.TagsManager
 	MetadataProvider P
 	LabelMatcher     func(map[string]string) map[string]string
 }
