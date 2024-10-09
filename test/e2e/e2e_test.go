@@ -17,9 +17,13 @@ limitations under the License.
 package e2e
 
 import (
+	resourcemanager "cloud.google.com/go/resourcemanager/apiv3"
 	"context"
 	"fmt"
+	"google.golang.org/api/option"
+	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -28,39 +32,30 @@ import (
 	"github.com/deliveryhero/gcp-config-connector-tagging-operator/test/utils"
 )
 
-const namespace = "gcp-config-connector-tagging-operator-system"
+const (
+	namespace = "gcp-config-connector-tagging-operator-system"
+)
 
 var _ = Describe("controller", Ordered, func() {
 	ctx := context.Background()
 
+	// We avoid the use of AfterAll due to ordering issues: https://github.com/onsi/ginkgo/issues/1284#issuecomment-1756314394
 	BeforeAll(func() {
 		By("installing config connector")
 		Expect(utils.InstallConfigConnector(ctx)).To(Succeed())
-
-		By("installing prometheus operator")
-		Expect(utils.InstallPrometheusOperator()).To(Succeed())
-
-		By("installing the cert-manager")
-		Expect(utils.InstallCertManager()).To(Succeed())
+		DeferCleanup(func() {
+			By("uninstalling the config connector bundle")
+			Expect(utils.UninstallConfigConnector(ctx)).To(Succeed())
+		})
 
 		By("creating manager namespace")
 		cmd := exec.Command("kubectl", "create", "ns", namespace)
 		_, _ = utils.Run(cmd)
-	})
-
-	AfterAll(func() {
-		By("uninstalling the config connector bundle")
-		Expect(utils.UninstallConfigConnector(ctx)).To(Succeed())
-
-		By("uninstalling the Prometheus manager bundle")
-		utils.UninstallPrometheusOperator()
-
-		By("uninstalling the cert-manager bundle")
-		utils.UninstallCertManager()
-
-		By("removing manager namespace")
-		cmd := exec.Command("kubectl", "delete", "ns", namespace)
-		_, _ = utils.Run(cmd)
+		DeferCleanup(func() {
+			By("removing manager namespace")
+			cmd := exec.Command("kubectl", "delete", "ns", namespace)
+			_, _ = utils.Run(cmd)
+		})
 	})
 
 	Context("Operator", func() {
@@ -69,7 +64,7 @@ var _ = Describe("controller", Ordered, func() {
 			var err error
 
 			// projectimage stores the name of the image used in the example
-			var projectimage = "example.com/gcp-config-connector-tagging-operator:v0.0.1"
+			var projectimage = "ghcr.io/deliveryhero/gcp-config-connector-tagging-operator:e2e"
 
 			By("building the manager(Operator) image")
 			cmd := exec.Command("make", "docker-build", fmt.Sprintf("IMG=%s", projectimage))
@@ -125,7 +120,76 @@ var _ = Describe("controller", Ordered, func() {
 				return nil
 			}
 			EventuallyWithOffset(1, verifyControllerUp, time.Minute, time.Second).Should(Succeed())
+		})
 
+		It("should apply tags to resources", func() {
+			projectID := os.Getenv("GCP_PROJECT")
+			Expect(projectID).NotTo(BeEmpty(), "Environment variable GCP_PROJECT must be set")
+			location := os.Getenv("GCP_LOCATION")
+			if location == "" {
+				location = "europe-west1"
+			}
+			bindingsClient, err := resourcemanager.NewTagBindingsClient(ctx, option.WithEndpoint(location+"-cloudresourcemanager.googleapis.com"))
+			ExpectWithOffset(1, err).NotTo(HaveOccurred())
+			valuesClient, err := resourcemanager.NewTagValuesClient(ctx)
+			ExpectWithOffset(1, err).NotTo(HaveOccurred())
+
+			By("creating a namespace")
+			resourceNamespace := utils.RandomSuffix("test-resources", 5)
+			cmd := exec.Command("kubectl", "create", "ns", resourceNamespace)
+			_, err = utils.Run(cmd)
+			ExpectWithOffset(1, err).NotTo(HaveOccurred())
+			DeferCleanup(func() {
+				cmd := exec.Command("kubectl", "delete", "ns", resourceNamespace)
+				_, err := utils.Run(cmd)
+				ExpectWithOffset(1, err).NotTo(HaveOccurred())
+			})
+			cmd = exec.Command("kubectl", "annotate", "ns", resourceNamespace, fmt.Sprintf("cnrm.cloud.google.com/project-id=%s", projectID))
+			_, err = utils.Run(cmd)
+			ExpectWithOffset(1, err).NotTo(HaveOccurred())
+
+			By("validating that a storage bucket is tagged")
+			bucketName := utils.RandomSuffix(fmt.Sprintf("%s-e2e", projectID), 5)
+			cmd = exec.Command("kubectl", "apply", "-f", "-")
+			cmd.Stdin = strings.NewReader(fmt.Sprintf(`
+apiVersion: storage.cnrm.cloud.google.com/v1beta1
+kind: StorageBucket
+metadata:
+  labels:
+    foo: bar
+  name: %s
+  namespace: %s
+spec:
+  location: %s
+  publicAccessPrevention: enforced
+  uniformBucketLevelAccess: true`, bucketName, resourceNamespace, location))
+			_, err = utils.Run(cmd)
+			ExpectWithOffset(1, err).NotTo(HaveOccurred())
+			ExpectWithOffset(1, waitForResourceReady("storagebucket", bucketName, resourceNamespace)).NotTo(HaveOccurred())
+			EventuallyWithOffset(1, verifyHasTagValue(ctx, bindingsClient, valuesClient, fmt.Sprintf("//storage.googleapis.com/projects/_/buckets/%s", bucketName), namespacedTagValue(projectID, "foo/bar")), time.Minute, time.Second).Should(Succeed())
 		})
 	})
 })
+
+func verifyHasTagValue(ctx context.Context, bindingsClient *resourcemanager.TagBindingsClient, valuesClient *resourcemanager.TagValuesClient, parent string, tagValue string) func(Gomega) {
+	return func(g Gomega) {
+		tagValues, err := utils.GetResourceTagValues(ctx, bindingsClient, valuesClient, parent)
+		g.ExpectWithOffset(2, err).NotTo(HaveOccurred())
+		g.ExpectWithOffset(2, len(tagValues)).To(BeNumerically(">=", 1), "Expected at least one tag value to be bound")
+		g.ExpectWithOffset(2, tagValues).To(ContainElement(tagValue))
+	}
+}
+
+func namespacedTagValue(projectID string, tagValue string) string {
+	return fmt.Sprintf("%s/%s", projectID, tagValue)
+}
+
+func waitForResourceReady(resourceType string, resource string, namespace string) error {
+	cmd := exec.Command("kubectl", "wait", fmt.Sprintf("%s/%s", resourceType, resource),
+		"--for", "condition=Ready",
+		"--namespace", namespace,
+		"--timeout", "5m",
+	)
+	_, err := utils.Run(cmd)
+	return err
+}

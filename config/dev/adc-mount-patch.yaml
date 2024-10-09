@@ -1,0 +1,21 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: does-not-matter
+spec:
+  template:
+    spec:
+      containers:
+        - name: manager
+          env:
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: /config/gcp/key.json
+          volumeMounts:
+            - name: gcp-adc
+              mountPath: /config/gcp
+              readOnly: true
+      volumes:
+        - name: gcp-adc
+          secret:
+            secretName: gcp-adc

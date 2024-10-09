@@ -1,0 +1,8 @@
+apiVersion: kustomize.deliveryhero.io/v1alpha1
+kind: GCPADCGenerator
+metadata:
+  name: gcp-adc-generator
+  annotations:
+    config.kubernetes.io/function: |
+      exec:
+        path: ./gcp-adc-generator.sh
