@@ -35,7 +35,6 @@ jobs:
         with:
           go-version-file: 'go.mod'
           cache: true
-      - run: go run github.com/vektra/mockery/v2@v2.42.0
       - name: Test
         run: make verify test
 
