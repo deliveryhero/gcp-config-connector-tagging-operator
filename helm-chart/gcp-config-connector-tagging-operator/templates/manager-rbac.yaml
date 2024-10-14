@@ -12,6 +12,7 @@ rules:
   verbs:
   - get
   - list
+  - update
   - watch
 - apiGroups:
   - redis.cnrm.cloud.google.com
@@ -20,6 +21,7 @@ rules:
   verbs:
   - get
   - list
+  - update
   - watch
 - apiGroups:
   - sql.cnrm.cloud.google.com
@@ -28,6 +30,7 @@ rules:
   verbs:
   - get
   - list
+  - update
   - watch
 - apiGroups:
   - storage.cnrm.cloud.google.com
@@ -36,6 +39,7 @@ rules:
   verbs:
   - get
   - list
+  - update
   - watch
 - apiGroups:
   - tags.cnrm.cloud.google.com
