@@ -1,0 +1,14 @@
+with-expecter: True
+inpackage: False
+dir: "{{.InterfaceDir}}/mocks"
+mockname: "{{.InterfaceName}}"
+outpkg: "mocks"
+filename: "mock_{{.InterfaceName | snakecase }}.go"
+all: true
+packages:
+  github.com/deliveryhero/gcp-config-connector-tagging-operator/internal/gcp:
+    interfaces:
+      TagsManager:
+        config:
+          with-expecter: False
+

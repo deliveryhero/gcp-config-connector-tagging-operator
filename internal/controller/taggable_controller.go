@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	ccv1alpha1 "github.com/GoogleCloudPlatform/k8s-config-connector/pkg/clients/generated/apis/k8s/v1alpha1"
@@ -22,6 +23,10 @@ import (
 const (
 	projectIDAnnotation = "cnrm.cloud.google.com/project-id"
 	tagBindingOwnerKey  = ".metadata.controller"
+)
+
+var (
+	setupLog = ctrl.Log.WithName("setup")
 )
 
 type ResourceMetadataProvider[R any] interface {
@@ -241,4 +246,17 @@ func SetupTagBindingIndex(mgr ctrl.Manager) error {
 
 func ownerIndexValue(apiVersion string, kind string, name string) string {
 	return fmt.Sprintf("%s/%s/%s", apiVersion, kind, name)
+}
+
+func CreateTaggableResourceController[T any, P ResourceMetadataProvider[T], PT ResourcePointer[T]](mgr ctrl.Manager, tagsManager gcp.TagsManager, provider P, labelMatcher func(map[string]string) map[string]string) {
+	if err := (&TaggableResourceReconciler[T, P, PT]{
+		Client:           mgr.GetClient(),
+		Scheme:           mgr.GetScheme(),
+		TagsManager:      tagsManager,
+		MetadataProvider: provider,
+		LabelMatcher:     labelMatcher,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create taggable resource controller")
+		os.Exit(1)
+	}
 }
