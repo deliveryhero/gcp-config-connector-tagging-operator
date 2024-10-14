@@ -17,33 +17,41 @@ limitations under the License.
 package utils
 
 import (
+	"archive/tar"
+	"cloud.google.com/go/storage"
+	"compress/gzip"
+	"context"
+	"errors"
 	"fmt"
+	"google.golang.org/api/option"
+	"io"
+	"math/rand"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2" //nolint:golint,revive
 )
 
 const (
-	prometheusOperatorVersion = "v0.72.0"
-	prometheusOperatorURL     = "https://github.com/prometheus-operator/prometheus-operator/" +
-		"releases/download/%s/bundle.yaml"
-
-	certmanagerVersion = "v1.14.4"
-	certmanagerURLTmpl = "https://github.com/jetstack/cert-manager/releases/download/%s/cert-manager.yaml"
+	configConnectorBundleBucket = "configconnector-operator"
+	configConnectorVersion      = "1.123.1"
+	configConnectorNamespace    = "cnrm-system"
 )
 
 func warnError(err error) {
 	_, _ = fmt.Fprintf(GinkgoWriter, "warning: %v\n", err)
 }
 
-// InstallPrometheusOperator installs the prometheus Operator to be used to export the enabled metrics.
-func InstallPrometheusOperator() error {
-	url := fmt.Sprintf(prometheusOperatorURL, prometheusOperatorVersion)
-	cmd := exec.Command("kubectl", "create", "-f", url)
-	_, err := Run(cmd)
-	return err
+func RandomSuffix(s string, length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charset[rand.Intn(len(charset))]
+	}
+	return fmt.Sprintf("%s-%s", s, string(b))
+
 }
 
 // Run executes the provided command within this context
@@ -66,41 +74,169 @@ func Run(cmd *exec.Cmd) ([]byte, error) {
 	return output, nil
 }
 
-// UninstallPrometheusOperator uninstalls the prometheus
-func UninstallPrometheusOperator() {
-	url := fmt.Sprintf(prometheusOperatorURL, prometheusOperatorVersion)
-	cmd := exec.Command("kubectl", "delete", "-f", url)
-	if _, err := Run(cmd); err != nil {
-		warnError(err)
-	}
-}
-
-// UninstallCertManager uninstalls the cert manager
-func UninstallCertManager() {
-	url := fmt.Sprintf(certmanagerURLTmpl, certmanagerVersion)
-	cmd := exec.Command("kubectl", "delete", "-f", url)
-	if _, err := Run(cmd); err != nil {
-		warnError(err)
-	}
-}
-
-// InstallCertManager installs the cert manager bundle.
-func InstallCertManager() error {
-	url := fmt.Sprintf(certmanagerURLTmpl, certmanagerVersion)
-	cmd := exec.Command("kubectl", "apply", "-f", url)
+func InstallConfigConnector(ctx context.Context) error {
+	cmd := exec.Command("kubectl", "create", "ns", configConnectorNamespace)
 	if _, err := Run(cmd); err != nil {
 		return err
 	}
-	// Wait for cert-manager-webhook to be ready, which can take time if cert-manager
-	// was re-installed after uninstalling on a cluster.
-	cmd = exec.Command("kubectl", "wait", "deployment.apps/cert-manager-webhook",
-		"--for", "condition=Available",
-		"--namespace", "cert-manager",
+
+	manifestFile, err := os.CreateTemp("", "configconnector-*.yaml")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(manifestFile.Name())
+
+	if err = downloadConfigConnectorManifests(ctx, manifestFile); err != nil {
+		return err
+	}
+
+	cmd = exec.Command("kubectl", "apply", "-f", manifestFile.Name())
+	if _, err := Run(cmd); err != nil {
+		return err
+	}
+
+	cmd = exec.Command("kubectl", "apply", "-f", fmt.Sprintf("https://raw.githubusercontent.com/GoogleCloudPlatform/k8s-config-connector/v%s/crds/tags_v1alpha1_tagslocationtagbinding.yaml", configConnectorVersion))
+	if _, err := Run(cmd); err != nil {
+		return err
+	}
+
+	adcPath := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
+	if adcPath == "" {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return err
+		}
+		adcPath = filepath.Join(homeDir, ".config", "gcloud", "application_default_credentials.json")
+	}
+
+	cmd = exec.Command("kubectl", "create", "secret", "generic", "e2e-gcp-adc-credentials", "--from-file", fmt.Sprintf("key.json=%s", adcPath), "--namespace", configConnectorNamespace)
+	if _, err := Run(cmd); err != nil {
+		return err
+	}
+
+	cmd = exec.Command("kubectl", "apply", "-f", "-")
+	cmd.Stdin = strings.NewReader(`
+apiVersion: core.cnrm.cloud.google.com/v1beta1
+kind: ConfigConnector
+metadata:
+  name: configconnector.core.cnrm.cloud.google.com
+spec:
+  mode: cluster
+  credentialSecretName: e2e-gcp-adc-credentials
+  stateIntoSpec: Absent
+---
+apiVersion: customize.core.cnrm.cloud.google.com/v1beta1
+kind: ControllerResource
+metadata:
+  name: cnrm-webhook-manager
+spec:
+  containers:
+    - name: webhook
+      resources:
+        limits:
+          memory: 512Mi
+        requests:
+          memory: 256Mi`)
+	if _, err := Run(cmd); err != nil {
+		return err
+	}
+
+	// wait for operator to be ready
+	cmd = exec.Command("kubectl", "wait", "configconnector/configconnector.core.cnrm.cloud.google.com",
+		"--for", "jsonpath={.status.healthy}=true",
 		"--timeout", "5m",
 	)
+	if _, err := Run(cmd); err != nil {
+		return err
+	}
+	cmd = exec.Command("kubectl", "wait", "deployment.apps/cnrm-webhook-manager",
+		"--for", "condition=Available",
+		"--namespace", "cnrm-system",
+		"--timeout", "5m",
+	)
+	if _, err := Run(cmd); err != nil {
+		return err
+	}
 
-	_, err := Run(cmd)
-	return err
+	return nil
+}
+
+func UninstallConfigConnector(ctx context.Context) error {
+	cmd := exec.Command("kubectl", "delete", "controllerresource", "cnrm-webhook-manager")
+	if _, err := Run(cmd); err != nil {
+		warnError(err)
+	}
+
+	cmd = exec.Command("kubectl", "delete", "configconnector", "configconnector.core.cnrm.cloud.google.com")
+	if _, err := Run(cmd); err != nil {
+		warnError(err)
+	}
+
+	cmd = exec.Command("kubectl", "delete", "secret", "e2e-gcp-adc-credentials", "--namespace", configConnectorNamespace)
+	if _, err := Run(cmd); err != nil {
+		warnError(err)
+	}
+
+	manifestFile, err := os.CreateTemp("", "configconnector-*.yaml")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(manifestFile.Name())
+
+	if err = downloadConfigConnectorManifests(ctx, manifestFile); err != nil {
+		return err
+	}
+
+	cmd = exec.Command("kubectl", "delete", "-f", manifestFile.Name())
+	if _, err := Run(cmd); err != nil {
+		return err
+	}
+
+	cmd = exec.Command("kubectl", "delete", "ns", configConnectorNamespace, "--ignore-not-found")
+	if _, err := Run(cmd); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func downloadConfigConnectorManifests(ctx context.Context, file *os.File) error {
+	storageClient, err := storage.NewClient(ctx, option.WithoutAuthentication(), storage.WithJSONReads())
+	if err != nil {
+		return err
+	}
+	defer storageClient.Close()
+
+	bundleReader, err := storageClient.Bucket(configConnectorBundleBucket).Object(fmt.Sprintf("%s/release-bundle.tar.gz", configConnectorVersion)).NewReader(ctx)
+	if err != nil {
+		return err
+	}
+	defer bundleReader.Close()
+	gzipReader, err := gzip.NewReader(bundleReader)
+	if err != nil {
+		return err
+	}
+	defer gzipReader.Close()
+	tarReader := tar.NewReader(gzipReader)
+
+	for {
+		hdr, err := tarReader.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+
+		if hdr.Name == "./operator-system/configconnector-operator.yaml" {
+			if _, err := io.Copy(file, tarReader); err != nil {
+				return err
+			}
+			return nil
+		}
+	}
+
+	return errors.New("no config-connector manifests found in bundle")
 }
 
 // LoadImageToKindClusterWithName loads a local docker image to the kind cluster

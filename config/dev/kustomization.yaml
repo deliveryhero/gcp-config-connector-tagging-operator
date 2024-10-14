@@ -1,0 +1,13 @@
+namespace: gcp-config-connector-tagging-operator-system
+
+resources:
+  - ../default
+
+patches:
+  - path: adc-mount-patch.yaml
+    target:
+      kind: Deployment
+
+generators:
+  - gcp-adc-generator.yaml
+
