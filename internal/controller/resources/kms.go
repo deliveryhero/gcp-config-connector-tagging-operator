@@ -8,7 +8,7 @@ import (
 	"github.com/deliveryhero/gcp-config-connector-tagging-operator/internal/controller"
 )
 
-// +kubebuilder:rbac:groups=kms.cnrm.cloud.google.com,resources=kmskeyrings,verbs=get;list;watch
+// +kubebuilder:rbac:groups=kms.cnrm.cloud.google.com,resources=kmskeyrings,verbs=get;list;watch;update
 
 var _ controller.ResourceMetadataProvider[kmsv1beta1.KMSKeyRing] = &KMSKeyRingMetadataProvider{}
 

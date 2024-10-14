@@ -25,7 +25,7 @@ import (
 	"github.com/deliveryhero/gcp-config-connector-tagging-operator/internal/controller"
 )
 
-// +kubebuilder:rbac:groups=storage.cnrm.cloud.google.com,resources=storagebuckets,verbs=get;list;watch
+// +kubebuilder:rbac:groups=storage.cnrm.cloud.google.com,resources=storagebuckets,verbs=get;list;watch;update
 
 var _ controller.ResourceMetadataProvider[storagev1beta1.StorageBucket] = &StorageBucketMetadataProvider{}
 

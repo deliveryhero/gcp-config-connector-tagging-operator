@@ -64,15 +64,7 @@ func (r *TaggableResourceReconciler[T, P, PT]) Reconcile(ctx context.Context, re
 	}
 
 	// Handle deletion using finalizer
-	if resource.GetDeletionTimestamp().IsZero() {
-		// Resource is not being deleted, ensure finalizer is present
-		if !controllerutil.ContainsFinalizer(resource, taggableResourceFinalizer) {
-			controllerutil.AddFinalizer(resource, taggableResourceFinalizer)
-			if err := r.Update(ctx, resource); err != nil {
-				return ctrl.Result{}, err
-			}
-		}
-	} else {
+	if !resource.GetDeletionTimestamp().IsZero() {
 		// Resource is being deleted
 		if controllerutil.ContainsFinalizer(resource, taggableResourceFinalizer) {
 			if err := r.handleTagBindingsDeletion(ctx, resource); err != nil {
@@ -89,6 +81,13 @@ func (r *TaggableResourceReconciler[T, P, PT]) Reconcile(ctx context.Context, re
 
 		// Stop reconciliation as the resource is being deleted
 		return ctrl.Result{}, nil
+	}
+
+	if !controllerutil.ContainsFinalizer(resource, taggableResourceFinalizer) {
+		controllerutil.AddFinalizer(resource, taggableResourceFinalizer)
+		if err := r.Update(ctx, resource); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	projectID := r.determineProjectID(ctx, resource)
@@ -279,7 +278,6 @@ func ownerIndexValue(apiVersion string, kind string, name string) string {
 func (r *TaggableResourceReconciler[T, P, PT]) handleTagBindingsDeletion(ctx context.Context, resource PT) error {
 	log := log.FromContext(ctx)
 
-	projectID := r.determineProjectID(ctx, resource)
 	gvk := resource.GetObjectKind().GroupVersionKind()
 	ownerIndex := ownerIndexValue(gvk.GroupVersion().String(), gvk.Kind, resource.GetName())
 
@@ -289,50 +287,15 @@ func (r *TaggableResourceReconciler[T, P, PT]) handleTagBindingsDeletion(ctx con
 		return err
 	}
 
-	// Check if the GCP resource is already deleted
-	gcpResourceDeleted, err := r.checkIfGCPRESOURCEisDeleted(ctx, resource, projectID)
-	if err != nil {
-		return fmt.Errorf("error checking GCP resource deletion status: %w", err)
-	}
-
 	for _, tagBinding := range boundTags.Items {
-		if gcpResourceDeleted {
-			// Orphan the tag binding by removing the owner reference
-			tagBinding.SetOwnerReferences(nil)
-			if err := r.Update(ctx, &tagBinding); err != nil {
-				if !errors.IsNotFound(err) { // Ignore not found errors, as the binding might have been deleted
-					return fmt.Errorf("error orphaning tag binding %s: %w", tagBinding.Name, err)
-				}
-			}
-		} else {
-			// GCP resource is not yet deleted, delete the tag binding directly
-			if err := r.Delete(ctx, &tagBinding); err != nil {
-				if !errors.IsNotFound(err) {
-					return fmt.Errorf("error deleting tag binding %s: %w", tagBinding.Name, err)
-				}
+		// Delete the tag binding directly
+		log.Info("deleting tag binding", "name", tagBinding.Name)
+		if err := r.Delete(ctx, &tagBinding); err != nil {
+			if !errors.IsNotFound(err) {
+				return fmt.Errorf("error deleting tag binding %s: %w", tagBinding.Name, err)
 			}
 		}
 	}
 
 	return nil
-}
-
-// checkIfGCPRESOURCEisDeleted checks if the corresponding GCP resource is already deleted.
-// You'll need to implement the logic to interact with the GCP API here.
-func (r *TaggableResourceReconciler[T, P, PT]) checkIfGCPRESOURCEisDeleted(ctx context.Context, resource PT, projectID string) (bool, error) {
-	// // Get the resource ID
-	// gcpResourceID := r.MetadataProvider.GetResourceID(projectID, resource)
-
-	// // Determine the resource type
-	// switch resource.(type) {
-	// case *sqlv1beta4.CloudSQLInstance:
-	//     return r.checkCloudSQLInstanceDeleted(ctx, projectID, gcpResourceID)
-	// case *redisv1beta1.CloudRedisInstance:
-	//     return r.checkCloudRedisInstanceDeleted(ctx, projectID, gcpResourceID)
-	// case *storagev1beta2.StorageBucket:
-	//     return r.checkStorageBucketDeleted(ctx, projectID, gcpResourceID)
-	// default:
-	//     return false, fmt.Errorf("unsupported resource type: %T", resource)
-	// }
-	return false, nil
 }
