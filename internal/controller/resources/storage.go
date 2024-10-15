@@ -26,6 +26,7 @@ import (
 )
 
 // +kubebuilder:rbac:groups=storage.cnrm.cloud.google.com,resources=storagebuckets,verbs=get;list;watch;update
+// +kubebuilder:rbac:groups=storage.cnrm.cloud.google.com,resources=storagebuckets/finalizers,verbs=update
 
 var _ controller.ResourceMetadataProvider[storagev1beta1.StorageBucket] = &StorageBucketMetadataProvider{}
 

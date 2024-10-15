@@ -26,6 +26,7 @@ import (
 )
 
 // +kubebuilder:rbac:groups=sql.cnrm.cloud.google.com,resources=sqlinstances,verbs=get;list;watch;update
+// +kubebuilder:rbac:groups=sql.cnrm.cloud.google.com,resources=sqlinstances/finalizers,verbs=update
 
 var _ controller.ResourceMetadataProvider[sqlv1beta1.SQLInstance] = &SQLInstanceMetadataProvider{}
 
