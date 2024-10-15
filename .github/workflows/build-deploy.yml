@@ -99,6 +99,14 @@ jobs:
         if: steps.semantic.outputs.new_release_published == 'true'
         run: IMG=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.semantic.outputs.new_release_version }} make helm
 
+      - name: Update both 'version' and 'appVersion' in Chart.yaml
+        if: steps.semantic.outputs.new_release_published == 'true'
+        uses: mikefarah/yq@master
+        with:
+          expression: '.version = "${{ steps.semantic.outputs.new_release_version }}", .appVersion = "${{ steps.semantic.outputs.new_release_version }}"'
+          inplace: true
+          files: ${{ github.repository }}/helm-chart/gcp-config-connector-tagging-operator/Chart.yaml
+
       - name: Chart | Push
         if: steps.semantic.outputs.new_release_published == 'true'
         uses: appany/helm-oci-chart-releaser@v0.3.0
