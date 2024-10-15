@@ -63,22 +63,20 @@ func (r *TaggableResourceReconciler[T, P, PT]) Reconcile(ctx context.Context, re
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	// Handle deletion using finalizer
+	// Handle TagBinding deletion using finalizer
 	if !resource.GetDeletionTimestamp().IsZero() {
 		// Resource is being deleted
 		if controllerutil.ContainsFinalizer(resource, taggableResourceFinalizer) {
 			if err := r.handleTagBindingsDeletion(ctx, resource); err != nil {
 				// If there's an error handling tag bindings, requeue for later
-				return ctrl.Result{RequeueAfter: 10 * time.Second}, err
+				return ctrl.Result{Requeue: true, RequeueAfter: 10 * time.Second}, err
 			}
-
 			// Remove finalizer to allow Kubernetes to delete the resource
 			controllerutil.RemoveFinalizer(resource, taggableResourceFinalizer)
 			if err := r.Update(ctx, resource); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
-
 		// Stop reconciliation as the resource is being deleted
 		return ctrl.Result{}, nil
 	}
