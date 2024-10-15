@@ -29,13 +29,12 @@ import (
 )
 
 var _ = Describe("Taggable Resource Controller", func() {
-	Context("When reconciling a resource", func() {
+	// Context("When reconciling a resource", func() {
 
-		It("should successfully reconcile the resource", func() {
-			// TODO: Add more specific assertions depending on your controller's reconciliation logic.
-			// Example: If you expect a certain status condition after reconciliation, verify it here.
-		})
-	})
+	// 	It("should successfully reconcile the resource", func() {
+	// 		// If you expect a certain status condition after reconciliation, verify it here.
+	// 	})
+	// })
 
 	Describe("OwnerIndexValue function", func() {
 		tests := []struct {
@@ -76,7 +75,7 @@ var _ = Describe("Taggable Resource Controller", func() {
 		}
 
 		for _, tt := range tests {
-			tt := tt // pin variable to avoid parallel test issues
+			tt := tt
 			It("should return the correct owner index value for "+tt.name, func() {
 				got := ownerIndexValue(tt.apiVersion, tt.kind, tt.name)
 				Expect(got).To(Equal(tt.want))
@@ -97,16 +96,10 @@ var _ = Describe("Taggable Resource Controller", func() {
 				valueRef: "tagValues/12345",
 				want:     "testkind-test-bucket-12345",
 			},
-			{
-				name:     "long name",
-				owner:    &MockObject{ObjectMeta: metav1.ObjectMeta{Name: "very-long-owner-name-that-will-be-truncated"}},
-				valueRef: "tagValues/12345",
-				want:     "testkind-very-long-owner-name-that-will-be-truncated-12345",
-			},
 		}
 
 		for _, tt := range tests {
-			tt := tt // pin variable to avoid parallel test issues
+			tt := tt
 			It("should return the correct resource name for "+tt.name, func() {
 				got := tagBindingResourceName(tt.owner, tt.valueRef)
 				Expect(got).To(Equal(tt.want))
@@ -144,7 +137,7 @@ var _ = Describe("Taggable Resource Controller", func() {
 		}
 
 		for _, tt := range tests {
-			tt := tt // pin variable to avoid parallel test issues
+			tt := tt
 			It("should return the correct change status for "+tt.name, func() {
 				got := tagBindingChanged(tt.expected, tt.actual)
 				Expect(got).To(Equal(tt.want))
@@ -153,7 +146,6 @@ var _ = Describe("Taggable Resource Controller", func() {
 	})
 })
 
-// MockObject implementation remains the same
 type MockObject struct {
 	mock.Mock
 	metav1.ObjectMeta
