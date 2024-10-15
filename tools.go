@@ -1,5 +1,7 @@
+//go:build tools
+
 package main
 
-//go:generate go run github.com/vektra/mockery/v2@v2.42.0
-
-//go:generate mockery
+import (
+	_ "github.com/vektra/mockery/v2"
+)
