@@ -9,6 +9,7 @@ import (
 )
 
 // +kubebuilder:rbac:groups=kms.cnrm.cloud.google.com,resources=kmskeyrings,verbs=get;list;watch
+// +kubebuilder:rbac:groups=kms.cnrm.cloud.google.com,resources=kmskeyrings/finalizers,verbs=update
 
 var _ controller.ResourceMetadataProvider[kmsv1beta1.KMSKeyRing] = &KMSKeyRingMetadataProvider{}
 

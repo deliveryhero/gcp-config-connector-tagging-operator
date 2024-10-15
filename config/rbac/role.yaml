@@ -13,6 +13,12 @@ rules:
   - list
   - watch
 - apiGroups:
+  - kms.cnrm.cloud.google.com
+  resources:
+  - kmskeyrings/finalizers
+  verbs:
+  - update
+- apiGroups:
   - redis.cnrm.cloud.google.com
   resources:
   - redisinstances
@@ -20,6 +26,12 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - redis.cnrm.cloud.google.com
+  resources:
+  - redisinstances/finalizers
+  verbs:
+  - update
 - apiGroups:
   - sql.cnrm.cloud.google.com
   resources:
@@ -29,6 +41,12 @@ rules:
   - list
   - watch
 - apiGroups:
+  - sql.cnrm.cloud.google.com
+  resources:
+  - sqlinstances/finalizers
+  verbs:
+  - update
+- apiGroups:
   - storage.cnrm.cloud.google.com
   resources:
   - storagebuckets
@@ -36,6 +54,12 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - storage.cnrm.cloud.google.com
+  resources:
+  - storagebuckets/finalizers
+  verbs:
+  - update
 - apiGroups:
   - tags.cnrm.cloud.google.com
   resources:
