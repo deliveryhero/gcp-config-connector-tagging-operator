@@ -25,7 +25,7 @@ import (
 const (
 	projectIDAnnotation       = "cnrm.cloud.google.com/project-id"
 	tagBindingOwnerKey        = ".metadata.controller"
-	taggableResourceFinalizer = "tagging.gcp.dhero.io/finalizer" // Add finalizer constant
+	taggableResourceFinalizer = "gdp.deliveryhero.io/resource-tags"
 )
 
 type ResourceMetadataProvider[R any] interface {
