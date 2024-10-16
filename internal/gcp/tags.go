@@ -25,7 +25,7 @@ import (
 	resourcemanager "cloud.google.com/go/resourcemanager/apiv3"
 	"cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
 	"github.com/googleapis/gax-go/v2/apierror"
-	"github.com/patrickmn/go-cache"
+	cache "github.com/patrickmn/go-cache"
 	"google.golang.org/grpc/codes"
 )
 

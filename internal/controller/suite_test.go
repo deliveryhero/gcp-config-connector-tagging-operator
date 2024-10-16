@@ -19,14 +19,17 @@ package controller
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	osruntime "runtime"
 	"testing"
 
+	resourcemanager "cloud.google.com/go/resourcemanager/apiv3"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/mock"
 
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
@@ -37,7 +40,7 @@ import (
 
 	storagev1beta1 "github.com/GoogleCloudPlatform/k8s-config-connector/pkg/clients/generated/apis/storage/v1beta1"
 	tagsv1alpha1 "github.com/GoogleCloudPlatform/k8s-config-connector/pkg/clients/generated/apis/tags/v1alpha1"
-	tagmocks "github.com/deliveryhero/gcp-config-connector-tagging-operator/internal/gcp/mocks"
+	"github.com/deliveryhero/gcp-config-connector-tagging-operator/internal/gcp"
 	"github.com/deliveryhero/gcp-config-connector-tagging-operator/internal/util"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -90,8 +93,20 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	targetLabels := ".*"
-	labelMatcher, err := util.LimitLabelsWithRegex(targetLabels)
-	tagsManager := &tagmocks.TagsManager{}
+	labelMatcher, _ := util.LimitLabelsWithRegex(targetLabels)
+
+	ctx := context.Background()
+	tagKeysClient, err := resourcemanager.NewTagKeysClient(ctx)
+	if err != nil {
+		setupLog.Error(err, "unable to create tag keys client")
+		os.Exit(1)
+	}
+	tagValuesClient, err := resourcemanager.NewTagValuesClient(ctx)
+	if err != nil {
+		setupLog.Error(err, "unable to create tag values client")
+		os.Exit(1)
+	}
+	tagsManager := gcp.NewTagsManager(tagKeysClient, tagValuesClient)
 
 	CreateTaggableResourceController(k8sManager, tagsManager, &StorageBucketMetadataProvider{}, labelMatcher)
 
@@ -123,4 +138,8 @@ func (in *StorageBucketMetadataProvider) GetResourceID(_ string, r *storagev1bet
 		name = *r.Spec.ResourceID
 	}
 	return fmt.Sprintf("//storage.googleapis.com/projects/_/buckets/%s", name)
+}
+
+type TagsManager struct {
+	mock.Mock
 }

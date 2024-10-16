@@ -14,128 +14,222 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package gcp_test
+package gcp
 
 import (
 	"context"
+	"fmt"
+	"net"
+	"sync"
 	"testing"
+	"time"
 
-	resourcemanagerpb "cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
-	"github.com/deliveryhero/gcp-config-connector-tagging-operator/internal/gcp/mocks"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
+	resourcemanager "cloud.google.com/go/resourcemanager/apiv3"
+	"cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
+	"google.golang.org/api/option"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/test/bufconn"
 )
 
-func setup() (*mocks.TagsManager, context.Context) {
-	mockTagsManager := new(mocks.TagsManager)
-	ctx := context.Background()
-	return mockTagsManager, ctx
+const bufSize = 1024 * 1024
+
+func bufDialer(lis *bufconn.Listener) (net.Conn, error) {
+	return lis.Dial()
 }
 
-func TestTagsManager(t *testing.T) {
-	mockTagsManager, ctx := setup()
+type fakeTagKeysServer struct {
+	resourcemanagerpb.UnimplementedTagKeysServer
+}
 
-	tests := []struct {
-		name          string
-		method        string
-		projectID     string
-		key           string
-		value         string
-		expectedKey   *resourcemanagerpb.TagKey
-		expectedValue *resourcemanagerpb.TagValue
-		expectedError error
-		mockSetupFunc func()
-		testFunc      func(*testing.T)
+func (s *fakeTagKeysServer) GetNamespacedTagKey(ctx context.Context, req *resourcemanagerpb.GetNamespacedTagKeyRequest) (*resourcemanagerpb.TagKey, error) {
+	if req.Name == "test-project/existing-key" {
+		return &resourcemanagerpb.TagKey{
+			Name:      "projects/test-project/existing-key",
+			ShortName: "existing-key",
+		}, nil
+	}
+	return nil, fmt.Errorf("tag key not found")
+}
+
+type fakeTagValuesServer struct {
+	resourcemanagerpb.UnimplementedTagValuesServer
+}
+
+func (s *fakeTagValuesServer) GetNamespacedTagValue(ctx context.Context, req *resourcemanagerpb.GetNamespacedTagValueRequest) (*resourcemanagerpb.TagValue, error) {
+	if req.Name == "test-project/existing-key/existing-value" {
+		return &resourcemanagerpb.TagValue{
+			Name:      "projects/test-project/existing-key/existing-value",
+			ShortName: "existing-value",
+		}, nil
+	}
+	return nil, fmt.Errorf("tag value not found")
+}
+
+func TestLookupKeyWithFakeGRPCServer(t *testing.T) {
+	lis := bufconn.Listen(bufSize)
+
+	s := grpc.NewServer()
+	resourcemanagerpb.RegisterTagKeysServer(s, &fakeTagKeysServer{})
+
+	go func() {
+		if err := s.Serve(lis); err != nil && err != grpc.ErrServerStopped {
+			t.Errorf("Server exited with error: %v", err)
+		}
+	}()
+	defer s.Stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(func(ctx context.Context, s string) (net.Conn, error) {
+		return bufDialer(lis)
+	}), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		t.Fatalf("Failed to dial bufnet: %v", err)
+	}
+	defer conn.Close()
+
+	keysClient, err := resourcemanager.NewTagKeysClient(ctx, option.WithGRPCConn(conn))
+	if err != nil {
+		t.Fatalf("Failed to create TagKeysClient: %v", err)
+	}
+
+	mgr := NewTagsManager(keysClient, nil)
+
+	key, err := mgr.LookupKey(ctx, "test-project", "existing-key")
+	if err != nil {
+		t.Fatalf("LookupKey failed: %v", err)
+	}
+
+	if key.Name != "projects/test-project/existing-key" {
+		t.Errorf("Expected key name 'projects/test-project/existing-key', got: %v", key.Name)
+	}
+}
+
+func TestLookupValueWithFakeGRPCServer(t *testing.T) {
+	lis := bufconn.Listen(bufSize)
+
+	s := grpc.NewServer()
+	resourcemanagerpb.RegisterTagKeysServer(s, &fakeTagKeysServer{})
+	resourcemanagerpb.RegisterTagValuesServer(s, &fakeTagValuesServer{})
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		defer wg.Done()
+		if err := s.Serve(lis); err != nil && err != grpc.ErrServerStopped {
+			t.Errorf("Server exited with error: %v", err)
+		}
+	}()
+
+	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(func(ctx context.Context, s string) (net.Conn, error) {
+		return bufDialer(lis)
+	}), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		t.Fatalf("Failed to dial bufnet: %v", err)
+	}
+	defer conn.Close()
+
+	valuesClient, err := resourcemanager.NewTagValuesClient(ctx, option.WithGRPCConn(conn))
+	if err != nil {
+		t.Fatalf("Failed to create TagValuesClient: %v", err)
+	}
+
+	mgr := NewTagsManager(nil, valuesClient)
+
+	value, err := mgr.LookupValue(ctx, "test-project", "existing-key", "existing-value")
+	if err != nil {
+		t.Fatalf("LookupValue failed: %v", err)
+	}
+
+	if value.Name != "projects/test-project/existing-key/existing-value" {
+		t.Errorf("Expected value name 'projects/test-project/existing-key/existing-value', got: %v", value.Name)
+	}
+
+	cancel()
+
+	s.Stop()
+
+	lis.Close()
+}
+
+func TestCacheKeyTagKey(t *testing.T) {
+	testCases := []struct {
+		name string
+		key  string
+		want string
 	}{
 		{
-			name:      "CreateKey success",
-			method:    "CreateKey",
-			projectID: "test-project",
-			key:       "test-key",
-			expectedKey: &resourcemanagerpb.TagKey{
-				Name: "projects/test-project/keys/12345",
-			},
-			expectedError: nil,
-			mockSetupFunc: func() {
-				mockTagsManager.On("CreateKey", mock.Anything, "test-project", "test-key").
-					Return(&resourcemanagerpb.TagKey{Name: "projects/test-project/keys/12345"}, nil)
-			},
-			testFunc: func(t *testing.T) {
-				tagKey, err := mockTagsManager.CreateKey(ctx, "test-project", "test-key")
-				assert.NoError(t, err)
-				assert.NotNil(t, tagKey)
-				assert.Equal(t, "projects/test-project/keys/12345", tagKey.Name)
-			},
+			name: "simple key",
+			key:  "my-key",
+			want: "key:my-key",
 		},
 		{
-			name:      "CreateValue success",
-			method:    "CreateValue",
-			projectID: "test-project",
-			key:       "test-key",
-			value:     "test-value",
-			expectedValue: &resourcemanagerpb.TagValue{
-				Name: "projects/test-project/keys/12345y/values/t12345",
-			},
-			expectedError: nil,
-			mockSetupFunc: func() {
-				mockTagsManager.On("CreateValue", mock.Anything, "test-project", "test-key", "test-value").
-					Return(&resourcemanagerpb.TagValue{Name: "projects/test-project/keys/12345y/values/t12345"}, nil)
-			},
-			testFunc: func(t *testing.T) {
-				tagValue, err := mockTagsManager.CreateValue(ctx, "test-project", "test-key", "test-value")
-				assert.NoError(t, err)
-				assert.NotNil(t, tagValue)
-				assert.Equal(t, "projects/test-project/keys/12345y/values/t12345", tagValue.Name)
-			},
+			name: "empty key",
+			key:  "",
+			want: "key:",
 		},
 		{
-			name:      "LookupKey success",
-			method:    "LookupKey",
-			projectID: "test-project",
-			key:       "test-key",
-			expectedKey: &resourcemanagerpb.TagKey{
-				Name: "projects/test-project/keys/12345",
-			},
-			expectedError: nil,
-			mockSetupFunc: func() {
-				mockTagsManager.On("LookupKey", mock.Anything, "test-project", "test-key").
-					Return(&resourcemanagerpb.TagKey{Name: "projects/test-project/keys/12345"}, nil)
-			},
-			testFunc: func(t *testing.T) {
-				tagKey, err := mockTagsManager.LookupKey(ctx, "test-project", "test-key")
-				assert.NoError(t, err)
-				assert.NotNil(t, tagKey)
-				assert.Equal(t, "projects/test-project/keys/12345", tagKey.Name)
-			},
-		},
-		{
-			name:      "LookupValue success",
-			method:    "LookupValue",
-			projectID: "test-project",
-			key:       "test-key",
-			value:     "test-value",
-			expectedValue: &resourcemanagerpb.TagValue{
-				Name: "projects/test-project/keys/12345/values/12345",
-			},
-			expectedError: nil,
-			mockSetupFunc: func() {
-				mockTagsManager.On("LookupValue", mock.Anything, "test-project", "test-key", "test-value").
-					Return(&resourcemanagerpb.TagValue{Name: "projects/test-project/keys/12345/values/12345"}, nil)
-			},
-			testFunc: func(t *testing.T) {
-				tagValue, err := mockTagsManager.LookupValue(ctx, "test-project", "test-key", "test-value")
-				assert.NoError(t, err)
-				assert.NotNil(t, tagValue)
-				assert.Equal(t, "projects/test-project/keys/12345/values/12345", tagValue.Name)
-			},
+			name: "key with special characters",
+			key:  "key-with-special_chars",
+			want: "key:key-with-special_chars",
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.mockSetupFunc()
-			tt.testFunc(t)
-			mockTagsManager.AssertExpectations(t)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := cacheKeyTagKey(tc.key)
+			if got != tc.want {
+				t.Errorf("cacheKeyTagKey(%q) = %q; want %q", tc.key, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestCacheKeyTagValue(t *testing.T) {
+	testCases := []struct {
+		name  string
+		key   string
+		value string
+		want  string
+	}{
+		{
+			name:  "simple key and value",
+			key:   "my-key",
+			value: "my-value",
+			want:  "value:my-key:my-value",
+		},
+		{
+			name:  "empty key",
+			key:   "",
+			value: "my-value",
+			want:  "value::my-value",
+		},
+		{
+			name:  "empty value",
+			key:   "my-key",
+			value: "",
+			want:  "value:my-key:",
+		},
+		{
+			name:  "key and value with special characters",
+			key:   "key-with-special_chars",
+			value: "value-with-special_chars",
+			want:  "value:key-with-special_chars:value-with-special_chars",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := cacheKeyTagValue(tc.key, tc.value)
+			if got != tc.want {
+				t.Errorf("cacheKeyTagValue(%q, %q) = %q; want %q", tc.key, tc.value, got, tc.want)
+			}
 		})
 	}
 }
