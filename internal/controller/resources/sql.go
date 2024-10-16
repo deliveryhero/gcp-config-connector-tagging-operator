@@ -25,8 +25,7 @@ import (
 	"github.com/deliveryhero/gcp-config-connector-tagging-operator/internal/controller"
 )
 
-// +kubebuilder:rbac:groups=sql.cnrm.cloud.google.com,resources=sqlinstances,verbs=get;list;watch
-// +kubebuilder:rbac:groups=sql.cnrm.cloud.google.com,resources=sqlinstances/finalizers,verbs=update
+// +kubebuilder:rbac:groups=sql.cnrm.cloud.google.com,resources=sqlinstances,verbs=get;list;watch;update
 
 var _ controller.ResourceMetadataProvider[sqlv1beta1.SQLInstance] = &SQLInstanceMetadataProvider{}
 
