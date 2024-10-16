@@ -23,7 +23,7 @@ import (
 	"github.com/deliveryhero/gcp-config-connector-tagging-operator/internal/controller"
 )
 
-// +kubebuilder:rbac:groups=redis.cnrm.cloud.google.com,resources=redisinstances,verbs=get;list;watch
+// +kubebuilder:rbac:groups=redis.cnrm.cloud.google.com,resources=redisinstances,verbs=get;list;watch;update
 
 var _ controller.ResourceMetadataProvider[redisv1beta1.RedisInstance] = &RedisInstanceMetadataProvider{}
 
