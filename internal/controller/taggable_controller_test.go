@@ -29,13 +29,6 @@ import (
 )
 
 var _ = Describe("Taggable Resource Controller", func() {
-	// Context("When reconciling a resource", func() {
-
-	// 	It("should successfully reconcile the resource", func() {
-	// 		// If you expect a certain status condition after reconciliation, verify it here.
-	// 	})
-	// })
-
 	Describe("OwnerIndexValue function", func() {
 		tests := []struct {
 			name       string
