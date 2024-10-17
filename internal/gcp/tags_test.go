@@ -26,6 +26,7 @@ import (
 
 	resourcemanager "cloud.google.com/go/resourcemanager/apiv3"
 	"cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
+	"github.com/stretchr/testify/assert"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -85,26 +86,17 @@ func TestLookupKeyWithFakeGRPCServer(t *testing.T) {
 	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(func(ctx context.Context, s string) (net.Conn, error) {
 		return bufDialer(lis)
 	}), grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		t.Fatalf("Failed to dial bufnet: %v", err)
-	}
+	assert.NoError(t, err, "Failed to dial bufnet")
 	defer conn.Close()
 
 	keysClient, err := resourcemanager.NewTagKeysClient(ctx, option.WithGRPCConn(conn))
-	if err != nil {
-		t.Fatalf("Failed to create TagKeysClient: %v", err)
-	}
+	assert.NoError(t, err, "Failed to create TagKeysClient")
 
 	mgr := NewTagsManager(keysClient, nil)
 
 	key, err := mgr.LookupKey(ctx, "test-project", "existing-key")
-	if err != nil {
-		t.Fatalf("LookupKey failed: %v", err)
-	}
-
-	if key.Name != "projects/test-project/existing-key" {
-		t.Errorf("Expected key name 'projects/test-project/existing-key', got: %v", key.Name)
-	}
+	assert.NoError(t, err, "LookupKey failed")
+	assert.Equal(t, "projects/test-project/existing-key", key.Name, "Expected key name 'projects/test-project/existing-key'")
 }
 
 func TestLookupValueWithFakeGRPCServer(t *testing.T) {
@@ -130,26 +122,17 @@ func TestLookupValueWithFakeGRPCServer(t *testing.T) {
 	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(func(ctx context.Context, s string) (net.Conn, error) {
 		return bufDialer(lis)
 	}), grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		t.Fatalf("Failed to dial bufnet: %v", err)
-	}
+	assert.NoError(t, err, "Failed to dial bufnet")
 	defer conn.Close()
 
 	valuesClient, err := resourcemanager.NewTagValuesClient(ctx, option.WithGRPCConn(conn))
-	if err != nil {
-		t.Fatalf("Failed to create TagValuesClient: %v", err)
-	}
+	assert.NoError(t, err, "Failed to create TagValuesClient")
 
 	mgr := NewTagsManager(nil, valuesClient)
 
 	value, err := mgr.LookupValue(ctx, "test-project", "existing-key", "existing-value")
-	if err != nil {
-		t.Fatalf("LookupValue failed: %v", err)
-	}
-
-	if value.Name != "projects/test-project/existing-key/existing-value" {
-		t.Errorf("Expected value name 'projects/test-project/existing-key/existing-value', got: %v", value.Name)
-	}
+	assert.NoError(t, err, "LookupValue failed")
+	assert.Equal(t, "projects/test-project/existing-key/existing-value", value.Name, "Expected value name 'projects/test-project/existing-key/existing-value'")
 
 	cancel()
 
@@ -184,9 +167,7 @@ func TestCacheKeyTagKey(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			got := cacheKeyTagKey(tc.key)
-			if got != tc.want {
-				t.Errorf("cacheKeyTagKey(%q) = %q; want %q", tc.key, got, tc.want)
-			}
+			assert.Equal(t, tc.want, got, fmt.Sprintf("cacheKeyTagKey(%q) should return %q", tc.key, tc.want))
 		})
 	}
 }
@@ -227,9 +208,7 @@ func TestCacheKeyTagValue(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			got := cacheKeyTagValue(tc.key, tc.value)
-			if got != tc.want {
-				t.Errorf("cacheKeyTagValue(%q, %q) = %q; want %q", tc.key, tc.value, got, tc.want)
-			}
+			assert.Equal(t, tc.want, got, fmt.Sprintf("cacheKeyTagValue(%q, %q) should return %q", tc.key, tc.value, tc.want))
 		})
 	}
 }
