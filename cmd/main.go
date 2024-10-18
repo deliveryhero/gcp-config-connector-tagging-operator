@@ -17,10 +17,12 @@ limitations under the License.
 package main
 
 import (
-	resourcemanager "cloud.google.com/go/resourcemanager/apiv3"
 	"context"
 	"crypto/tls"
 	"flag"
+	"os"
+
+	resourcemanager "cloud.google.com/go/resourcemanager/apiv3"
 	kmsv1beta1 "github.com/GoogleCloudPlatform/k8s-config-connector/pkg/clients/generated/apis/kms/v1beta1"
 	redisv1beta1 "github.com/GoogleCloudPlatform/k8s-config-connector/pkg/clients/generated/apis/redis/v1beta1"
 	sqlv1beta1 "github.com/GoogleCloudPlatform/k8s-config-connector/pkg/clients/generated/apis/sql/v1beta1"
@@ -29,7 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	"os"
+
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -185,10 +187,10 @@ func main() {
 		setupLog.Error(err, "unable to setup tag binding index")
 		os.Exit(1)
 	}
-	createTaggableResourceController(mgr, tagsManager, &resources.StorageBucketMetadataProvider{}, labelMatcher)
-	createTaggableResourceController(mgr, tagsManager, &resources.SQLInstanceMetadataProvider{}, labelMatcher)
-	createTaggableResourceController(mgr, tagsManager, &resources.RedisInstanceMetadataProvider{}, labelMatcher)
-	createTaggableResourceController(mgr, tagsManager, &resources.KMSKeyRingMetadataProvider{}, labelMatcher)
+	controller.CreateTaggableResourceController(mgr, tagsManager, &resources.StorageBucketMetadataProvider{}, labelMatcher)
+	controller.CreateTaggableResourceController(mgr, tagsManager, &resources.SQLInstanceMetadataProvider{}, labelMatcher)
+	controller.CreateTaggableResourceController(mgr, tagsManager, &resources.RedisInstanceMetadataProvider{}, labelMatcher)
+	controller.CreateTaggableResourceController(mgr, tagsManager, &resources.KMSKeyRingMetadataProvider{}, labelMatcher)
 	// +kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
@@ -203,19 +205,6 @@ func main() {
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
-		os.Exit(1)
-	}
-}
-
-func createTaggableResourceController[T any, P controller.ResourceMetadataProvider[T], PT controller.ResourcePointer[T]](mgr ctrl.Manager, tagsManager *gcp.TagsManager, provider P, labelMatcher func(map[string]string) map[string]string) {
-	if err := (&controller.TaggableResourceReconciler[T, P, PT]{
-		Client:           mgr.GetClient(),
-		Scheme:           mgr.GetScheme(),
-		TagsManager:      tagsManager,
-		MetadataProvider: provider,
-		LabelMatcher:     labelMatcher,
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create taggable resource controller")
 		os.Exit(1)
 	}
 }
