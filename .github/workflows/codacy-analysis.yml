@@ -23,6 +23,8 @@ jobs:
 
       - name: Run Codacy Analysis
         uses: codacy/codacy-analysis-cli-action@v4
+        with:
+          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
       - name: Run Codacy Coverage Script and Commit
         run: |
           # Run the script and capture its output
