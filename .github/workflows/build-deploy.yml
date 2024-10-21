@@ -52,6 +52,7 @@ jobs:
         with:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
           coverage-reports: cover.out
+          force-coverage-parser: go
 
   release:
     name: Release Package to GHCR
