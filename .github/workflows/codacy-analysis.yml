@@ -23,5 +23,8 @@ jobs:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
 
       - name: Run Codacy Coverage Script
-        run: bash <(curl -Ls https://coverage.codacy.com/get.sh) \
-          --project-token ${{ secrets.CODACY_PROJECT_TOKEN }}
+        run: |
+          go test -coverprofile=unit.coverage.out ./...
+          bash <(curl -Ls https://coverage.codacy.com/get.sh) report \
+              --force-coverage-parser go -r unit.coverage.out \
+              --project-token ${{ secrets.CODACY_PROJECT_TOKEN }}
