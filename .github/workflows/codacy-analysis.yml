@@ -1,0 +1,39 @@
+name: Codacy Analysis
+
+on:
+  push:
+    branches: [main]
+    # paths:
+    #   - "**.go"
+  pull_request:
+    branches: [main]
+    # paths:
+    #   - "**.go"
+
+jobs:
+  codacy-analysis:
+    runs-on: ubuntu-latest
+    permissions:
+      # These permissions are necessary for the Codacy Analysis CLI action to authenticate with the GitHub app
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Codacy Analysis
+        uses: codacy/codacy-analysis-cli-action@v4
+      - name: Run Codacy Coverage Script and Commit
+        run: |
+          # Run the script and capture its output
+          OUTPUT=$(bash <(curl -Ls https://coverage.codacy.com/get.sh)) 
+
+          # Create a file to store the output (e.g., codacy-coverage-output.txt)
+          echo "$OUTPUT" > codacy-coverage-output.txt
+
+          # Commit the changes
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add codacy-coverage-output.txt
+          git commit -m "Update Codacy coverage script output"
+          git push origin HEAD:${{ github.head_ref }}
