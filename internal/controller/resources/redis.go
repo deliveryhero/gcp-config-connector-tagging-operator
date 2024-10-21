@@ -18,9 +18,15 @@ package resources
 
 import (
 	"fmt"
+	"regexp"
 
+	"cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
 	redisv1beta1 "github.com/GoogleCloudPlatform/k8s-config-connector/pkg/clients/generated/apis/redis/v1beta1"
 	"github.com/deliveryhero/gcp-config-connector-tagging-operator/internal/controller"
+)
+
+var (
+	projectNumRe = regexp.MustCompile(`[0-9]+`)
 )
 
 // +kubebuilder:rbac:groups=redis.cnrm.cloud.google.com,resources=redisinstances,verbs=get;list;watch;update
@@ -33,7 +39,7 @@ func (in *RedisInstanceMetadataProvider) GetResourceLocation(r *redisv1beta1.Red
 	return r.Spec.Region
 }
 
-func (in *RedisInstanceMetadataProvider) GetResourceID(projectID string, r *redisv1beta1.RedisInstance) string {
+func (in *RedisInstanceMetadataProvider) GetResourceID(projectInfo *resourcemanagerpb.Project, r *redisv1beta1.RedisInstance) string {
 	name := r.Name
 	if r.Spec.ResourceID != nil {
 		name = *r.Spec.ResourceID
@@ -41,5 +47,7 @@ func (in *RedisInstanceMetadataProvider) GetResourceID(projectID string, r *redi
 
 	region := r.Spec.Region
 
-	return fmt.Sprintf("//redis.googleapis.com/projects/%s/locations/%s/instances/%s", projectID, region, name)
+	projectNumber := projectNumRe.FindString(projectInfo.Name)
+
+	return fmt.Sprintf("//redis.googleapis.com/projects/%s/locations/%s/instances/%s", projectNumber, region, name)
 }

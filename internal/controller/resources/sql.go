@@ -19,6 +19,7 @@ package resources
 import (
 	"fmt"
 
+	"cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
 	"k8s.io/utils/ptr"
 
 	sqlv1beta1 "github.com/GoogleCloudPlatform/k8s-config-connector/pkg/clients/generated/apis/sql/v1beta1"
@@ -35,11 +36,11 @@ func (in *SQLInstanceMetadataProvider) GetResourceLocation(r *sqlv1beta1.SQLInst
 	return ptr.Deref(r.Spec.Region, "")
 }
 
-func (in *SQLInstanceMetadataProvider) GetResourceID(projectID string, r *sqlv1beta1.SQLInstance) string {
+func (in *SQLInstanceMetadataProvider) GetResourceID(projectInfo *resourcemanagerpb.Project, r *sqlv1beta1.SQLInstance) string {
 	name := r.Name
 	if r.Spec.ResourceID != nil {
 		name = *r.Spec.ResourceID
 	}
 
-	return fmt.Sprintf("//sqladmin.googleapis.com/projects/%s/instances/%s", projectID, name)
+	return fmt.Sprintf("//sqladmin.googleapis.com/projects/%s/instances/%s", projectInfo.ProjectId, name)
 }

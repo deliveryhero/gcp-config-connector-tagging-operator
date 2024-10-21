@@ -92,7 +92,7 @@ func TestLookupKeyWithFakeGRPCServer(t *testing.T) {
 	keysClient, err := resourcemanager.NewTagKeysClient(ctx, option.WithGRPCConn(conn))
 	assert.NoError(t, err, "Failed to create TagKeysClient")
 
-	mgr := NewTagsManager(keysClient, nil)
+	mgr := NewTagsManager(keysClient, nil, nil)
 
 	key, err := mgr.LookupKey(ctx, "test-project", "existing-key")
 	assert.NoError(t, err, "LookupKey failed")
@@ -128,7 +128,7 @@ func TestLookupValueWithFakeGRPCServer(t *testing.T) {
 	valuesClient, err := resourcemanager.NewTagValuesClient(ctx, option.WithGRPCConn(conn))
 	assert.NoError(t, err, "Failed to create TagValuesClient")
 
-	mgr := NewTagsManager(nil, valuesClient)
+	mgr := NewTagsManager(nil, valuesClient, nil)
 
 	value, err := mgr.LookupValue(ctx, "test-project", "existing-key", "existing-value")
 	assert.NoError(t, err, "LookupValue failed")

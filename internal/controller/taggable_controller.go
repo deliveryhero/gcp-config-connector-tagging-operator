@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
 	ccv1alpha1 "github.com/GoogleCloudPlatform/k8s-config-connector/pkg/clients/generated/apis/k8s/v1alpha1"
 	tagsv1alpha1 "github.com/GoogleCloudPlatform/k8s-config-connector/pkg/clients/generated/apis/tags/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -51,7 +52,7 @@ var (
 
 type ResourceMetadataProvider[R any] interface {
 	GetResourceLocation(r *R) string
-	GetResourceID(projectID string, r *R) string
+	GetResourceID(projectInfo *resourcemanagerpb.Project, r *R) string
 }
 
 type ResourcePointer[T any] interface {
@@ -135,9 +136,14 @@ func (r *TaggableResourceReconciler[T, P, PT]) Reconcile(ctx context.Context, re
 		expectedTagValueRefs = append(expectedTagValueRefs, value.Name)
 	}
 
+	projectInfo, err := r.TagsManager.GetProjectInfo(ctx, projectID)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	expectedResourceNames := make(map[string]bool)
 	for _, ref := range expectedTagValueRefs {
-		binding, err := r.generateBinding(resource, projectID, ref)
+		binding, err := r.generateBinding(resource, projectInfo, ref)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -203,7 +209,7 @@ func (r *TaggableResourceReconciler[T, P, PT]) determineProjectID(ctx context.Co
 	return ns.Name
 }
 
-func (r *TaggableResourceReconciler[T, P, PT]) generateBinding(resource PT, projectID string, tagValueID string) (*tagsv1alpha1.TagsLocationTagBinding, error) {
+func (r *TaggableResourceReconciler[T, P, PT]) generateBinding(resource PT, projectInfo *resourcemanagerpb.Project, tagValueID string) (*tagsv1alpha1.TagsLocationTagBinding, error) {
 	binding := &tagsv1alpha1.TagsLocationTagBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        tagBindingResourceName(resource, tagValueID),
@@ -213,15 +219,15 @@ func (r *TaggableResourceReconciler[T, P, PT]) generateBinding(resource PT, proj
 		Spec: tagsv1alpha1.TagsLocationTagBindingSpec{
 			Location: r.MetadataProvider.GetResourceLocation(resource),
 			ParentRef: ccv1alpha1.ResourceRef{
-				External: r.MetadataProvider.GetResourceID(projectID, resource),
+				External: r.MetadataProvider.GetResourceID(projectInfo, resource),
 			},
 			TagValueRef: ccv1alpha1.ResourceRef{
 				External: tagValueID,
 			},
 		},
 	}
-	if projectID != "" {
-		binding.Annotations[projectIDAnnotation] = projectID
+	if projectInfo.ProjectId != "" {
+		binding.Annotations[projectIDAnnotation] = projectInfo.ProjectId
 	}
 	if err := ctrl.SetControllerReference(resource, binding, r.Scheme); err != nil {
 		return nil, err

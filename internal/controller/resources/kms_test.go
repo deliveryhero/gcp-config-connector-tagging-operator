@@ -19,6 +19,7 @@ package resources
 import (
 	"testing"
 
+	"cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
 	kmsv1beta1 "github.com/GoogleCloudPlatform/k8s-config-connector/pkg/clients/generated/apis/kms/v1beta1"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,10 +35,10 @@ func TestKMSKeyRingMetadataProvider_GetResourceID(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name      string
-		r         *kmsv1beta1.KMSKeyRing
-		projectID string
-		want      string
+		name        string
+		r           *kmsv1beta1.KMSKeyRing
+		projectInfo *resourcemanagerpb.Project
+		want        string
 	}{
 		{
 			name: "with generated name",
@@ -50,8 +51,10 @@ func TestKMSKeyRingMetadataProvider_GetResourceID(t *testing.T) {
 					Location: "us-central1",
 				},
 			},
-			projectID: "test-project",
-			want:      "//cloudkms.googleapis.com/projects/test-project/locations/us-central1/keyRings/test-key-ring",
+			projectInfo: &resourcemanagerpb.Project{
+				ProjectId: "test-project",
+			},
+			want: "//cloudkms.googleapis.com/projects/test-project/locations/us-central1/keyRings/test-key-ring",
 		},
 		{
 			name: "with overridden resource id",
@@ -65,8 +68,10 @@ func TestKMSKeyRingMetadataProvider_GetResourceID(t *testing.T) {
 					ResourceID: ptr.To("overridden-key-ring-id"),
 				},
 			},
-			projectID: "test-project",
-			want:      "//cloudkms.googleapis.com/projects/test-project/locations/us-central1/keyRings/overridden-key-ring-id",
+			projectInfo: &resourcemanagerpb.Project{
+				ProjectId: "test-project",
+			},
+			want: "//cloudkms.googleapis.com/projects/test-project/locations/us-central1/keyRings/overridden-key-ring-id",
 		},
 	}
 
@@ -74,7 +79,7 @@ func TestKMSKeyRingMetadataProvider_GetResourceID(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			p := &KMSKeyRingMetadataProvider{}
 
-			got := p.GetResourceID(tc.projectID, tc.r)
+			got := p.GetResourceID(tc.projectInfo, tc.r)
 
 			require.Equal(t, tc.want, got)
 		})

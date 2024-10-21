@@ -180,7 +180,14 @@ func main() {
 		setupLog.Error(err, "unable to create tag values client")
 		os.Exit(1)
 	}
-	tagsManager := gcp.NewTagsManager(tagKeysClient, tagValuesClient)
+
+	projectClient, err := resourcemanager.NewProjectsClient(ctx)
+	if err != nil {
+		setupLog.Error(err, "unable to create project client")
+		os.Exit(1)
+	}
+
+	tagsManager := gcp.NewTagsManager(tagKeysClient, tagValuesClient, projectClient)
 
 	err = controller.SetupTagBindingIndex(mgr)
 	if err != nil {

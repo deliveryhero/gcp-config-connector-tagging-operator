@@ -19,11 +19,11 @@ package resources
 import (
 	"testing"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
-
+	"cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
 	storagev1beta1 "github.com/GoogleCloudPlatform/k8s-config-connector/pkg/clients/generated/apis/storage/v1beta1"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 )
 
 func TestStorageBucketMetadataProvider_GetResourceID(t *testing.T) {
@@ -35,10 +35,10 @@ func TestStorageBucketMetadataProvider_GetResourceID(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name      string
-		r         *storagev1beta1.StorageBucket
-		projectID string
-		want      string
+		name        string
+		r           *storagev1beta1.StorageBucket
+		projectInfo *resourcemanagerpb.Project
+		want        string
 	}{
 		{
 			name: "with generated name",
@@ -51,8 +51,10 @@ func TestStorageBucketMetadataProvider_GetResourceID(t *testing.T) {
 					Location: ptr.To("us-central1"),
 				},
 			},
-			projectID: "test-project",
-			want:      "//storage.googleapis.com/projects/_/buckets/test-bucket",
+			projectInfo: &resourcemanagerpb.Project{
+				ProjectId: "test-project",
+			},
+			want: "//storage.googleapis.com/projects/_/buckets/test-bucket",
 		},
 		{
 			name: "with overridden resource id",
@@ -66,8 +68,10 @@ func TestStorageBucketMetadataProvider_GetResourceID(t *testing.T) {
 					ResourceID: ptr.To("overridden-bucket-id"),
 				},
 			},
-			projectID: "test-project",
-			want:      "//storage.googleapis.com/projects/_/buckets/overridden-bucket-id",
+			projectInfo: &resourcemanagerpb.Project{
+				ProjectId: "test-project",
+			},
+			want: "//storage.googleapis.com/projects/_/buckets/overridden-bucket-id",
 		},
 	}
 
@@ -75,7 +79,8 @@ func TestStorageBucketMetadataProvider_GetResourceID(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			p := &StorageBucketMetadataProvider{}
 
-			got := p.GetResourceID(tc.projectID, tc.r)
+			got := p.GetResourceID(tc.projectInfo, tc.r)
+
 			require.Equal(t, tc.want, got)
 		})
 	}

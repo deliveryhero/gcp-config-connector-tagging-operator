@@ -19,6 +19,7 @@ package resources
 import (
 	"fmt"
 
+	"cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
 	kmsv1beta1 "github.com/GoogleCloudPlatform/k8s-config-connector/pkg/clients/generated/apis/kms/v1beta1"
 
 	"github.com/deliveryhero/gcp-config-connector-tagging-operator/internal/controller"
@@ -34,11 +35,11 @@ func (in *KMSKeyRingMetadataProvider) GetResourceLocation(r *kmsv1beta1.KMSKeyRi
 	return r.Spec.Location
 }
 
-func (in *KMSKeyRingMetadataProvider) GetResourceID(projectID string, r *kmsv1beta1.KMSKeyRing) string {
+func (in *KMSKeyRingMetadataProvider) GetResourceID(projectInfo *resourcemanagerpb.Project, r *kmsv1beta1.KMSKeyRing) string {
 	name := r.Name
 	if r.Spec.ResourceID != nil {
 		name = *r.Spec.ResourceID
 	}
 
-	return fmt.Sprintf("//cloudkms.googleapis.com/projects/%s/locations/%s/keyRings/%s", projectID, r.Spec.Location, name)
+	return fmt.Sprintf("//cloudkms.googleapis.com/projects/%s/locations/%s/keyRings/%s", projectInfo.ProjectId, r.Spec.Location, name)
 }

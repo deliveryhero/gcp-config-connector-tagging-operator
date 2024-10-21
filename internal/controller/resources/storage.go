@@ -19,6 +19,7 @@ package resources
 import (
 	"fmt"
 
+	"cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
 	storagev1beta1 "github.com/GoogleCloudPlatform/k8s-config-connector/pkg/clients/generated/apis/storage/v1beta1"
 	"k8s.io/utils/ptr"
 
@@ -35,7 +36,7 @@ func (in *StorageBucketMetadataProvider) GetResourceLocation(r *storagev1beta1.S
 	return ptr.Deref(r.Spec.Location, "")
 }
 
-func (in *StorageBucketMetadataProvider) GetResourceID(_ string, r *storagev1beta1.StorageBucket) string {
+func (in *StorageBucketMetadataProvider) GetResourceID(_ *resourcemanagerpb.Project, r *storagev1beta1.StorageBucket) string {
 	name := r.Name
 	if r.Spec.ResourceID != nil {
 		name = *r.Spec.ResourceID
