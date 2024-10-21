@@ -3,12 +3,12 @@ name: Codacy Analysis
 on:
   push:
     branches: [main]
-    # paths:
-    #   - "**.go"
+    paths:
+      - "**.go"
   pull_request:
     branches: [main]
-    # paths:
-    #   - "**.go"
+    paths:
+      - "**.go"
 
 jobs:
   codacy-analysis:
