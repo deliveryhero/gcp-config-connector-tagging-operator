@@ -13,10 +13,6 @@ on:
 jobs:
   codacy-analysis:
     runs-on: ubuntu-latest
-    permissions:
-      # These permissions are necessary for the Codacy Analysis CLI action to authenticate with the GitHub app
-      contents: read
-      security-events: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -25,3 +21,6 @@ jobs:
         uses: codacy/codacy-analysis-cli-action@97bf5df3c09e75f5bcd72695998f96ebd701846e
         with:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+
+      - name: Run Codacy Coverage Script
+        run: bash <(curl -Ls https://coverage.codacy.com/get.sh)
