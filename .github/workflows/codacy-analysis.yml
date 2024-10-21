@@ -9,9 +9,11 @@ on:
     branches: [main]
     paths:
       - "**.go"
+    types: [opened, synchronize, reopened, edited]
 
 jobs:
   codacy-analysis:
+    if: github.repository == github.event.pull_request.head.repo.full_name
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -22,9 +24,8 @@ jobs:
         with:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
 
-      - name: Run Codacy Coverage Script
-        run: |
-          go test -coverprofile=unit.coverage.out ./...
-          bash <(curl -Ls https://coverage.codacy.com/get.sh) report \
-              --force-coverage-parser go -r unit.coverage.out \
-              --project-token ${{ secrets.CODACY_PROJECT_TOKEN }}
+      - name: Run codacy-coverage-reporter
+        uses: codacy/codacy-coverage-reporter-action@89d6c85cfafaec52c72b6c5e8b2878d33104c699
+        with:
+          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          coverage-reports: coverage.out
