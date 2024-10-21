@@ -226,9 +226,9 @@ func (r *TaggableResourceReconciler[T, P, PT]) generateBinding(resource PT, proj
 			},
 		},
 	}
-	if projectInfo.ProjectId != "" {
-		binding.Annotations[projectIDAnnotation] = projectInfo.ProjectId
-	}
+
+	binding.Annotations[projectIDAnnotation] = projectInfo.ProjectId
+
 	if err := ctrl.SetControllerReference(resource, binding, r.Scheme); err != nil {
 		return nil, err
 	}

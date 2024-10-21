@@ -156,6 +156,16 @@ func cacheKeyTagValue(key string, value string) string {
 
 func (m *tagsManager) GetProjectInfo(ctx context.Context, projectID string) (*resourcemanagerpb.Project, error) {
 
+	if projectID == "" {
+		return nil, fmt.Errorf("project ID cannot be empty")
+	}
+
+	cacheKey := fmt.Sprintf("project:%s", projectID)
+	cachedProject, found := m.cache.Get(cacheKey)
+	if found {
+		return cachedProject.(*resourcemanagerpb.Project), nil
+	}
+
 	req := &resourcemanagerpb.GetProjectRequest{
 		Name: "projects/" + projectID,
 	}
@@ -164,5 +174,7 @@ func (m *tagsManager) GetProjectInfo(ctx context.Context, projectID string) (*re
 	if err != nil {
 		return nil, fmt.Errorf("failed to get project: %v", err)
 	}
+
+	m.cache.Set(cacheKey, project, tagCacheDuration)
 	return project, nil
 }
