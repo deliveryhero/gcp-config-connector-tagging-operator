@@ -47,7 +47,7 @@ func (in *RedisInstanceMetadataProvider) GetResourceID(projectInfo *resourcemana
 
 	region := r.Spec.Region
 
-	projectNumber := projectNumRe.FindString(projectInfo.Name)
+	projectNumber := strings.TrimPrefix(projectInfo.Name, "projects/")
 
 	return fmt.Sprintf("//redis.googleapis.com/projects/%s/locations/%s/instances/%s", projectNumber, region, name)
 }
