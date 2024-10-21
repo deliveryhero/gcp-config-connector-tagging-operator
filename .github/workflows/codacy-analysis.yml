@@ -25,17 +25,16 @@ jobs:
         uses: codacy/codacy-analysis-cli-action@master
         with:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
-      - name: Run Codacy Coverage Script and Commit
-        run: |
-          # Run the script and capture its output
-          OUTPUT=$(bash <(curl -Ls https://coverage.codacy.com/get.sh)) 
 
-          # Create a file to store the output (e.g., codacy-coverage-output.txt)
-          echo "$OUTPUT" > codacy-coverage-output.txt
+    #   - name: Run Codacy Coverage Script and Commit
+    #     run: |
+    #       # Run the script and capture its output
+    #       OUTPUT=$(bash <(curl -Ls https://coverage.codacy.com/get.sh)) >
+    #       echo "$OUTPUT" >
 
-          # Commit the changes
-          git config user.name 'github-actions[bot]'
-          git config user.email 'github-actions[bot]@users.noreply.github.com'
-          git add codacy-coverage-output.txt
-          git commit -m "Update Codacy coverage script output"
-          git push origin HEAD:${{ github.head_ref }}
+    #       # Commit the changes
+    #       git config user.name 'github-actions[bot]'
+    #       git config user.email 'github-actions[bot]@users.noreply.github.com'
+    #       git add codacy-coverage-output.txt
+    #       git commit -m "Update Codacy coverage script output"
+    #       git push origin HEAD:${{ github.head_ref }}
