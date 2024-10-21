@@ -18,15 +18,11 @@ package resources
 
 import (
 	"fmt"
-	"regexp"
+	"strings"
 
 	"cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
 	redisv1beta1 "github.com/GoogleCloudPlatform/k8s-config-connector/pkg/clients/generated/apis/redis/v1beta1"
 	"github.com/deliveryhero/gcp-config-connector-tagging-operator/internal/controller"
-)
-
-var (
-	projectNumRe = regexp.MustCompile(`[0-9]+`)
 )
 
 // +kubebuilder:rbac:groups=redis.cnrm.cloud.google.com,resources=redisinstances,verbs=get;list;watch;update
