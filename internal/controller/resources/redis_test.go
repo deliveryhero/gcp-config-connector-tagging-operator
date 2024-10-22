@@ -19,6 +19,7 @@ package resources
 import (
 	"testing"
 
+	"cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
 	redisv1beta1 "github.com/GoogleCloudPlatform/k8s-config-connector/pkg/clients/generated/apis/redis/v1beta1"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,10 +35,10 @@ func TestRedisInstanceMetadataProvider_GetResourceID(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name      string
-		r         *redisv1beta1.RedisInstance
-		projectID string
-		want      string
+		name        string
+		r           *redisv1beta1.RedisInstance
+		projectInfo *resourcemanagerpb.Project
+		want        string
 	}{
 		{
 			name: "with generated name",
@@ -50,8 +51,11 @@ func TestRedisInstanceMetadataProvider_GetResourceID(t *testing.T) {
 					Region: "us-central1",
 				},
 			},
-			projectID: "test-project",
-			want:      "//redis.googleapis.com/projects/test-project/locations/us-central1/instances/test-instance",
+			projectInfo: &resourcemanagerpb.Project{
+				Name:      "projects/123456789", // Example project name with number
+				ProjectId: "test-project",
+			},
+			want: "//redis.googleapis.com/projects/123456789/locations/us-central1/instances/test-instance",
 		},
 		{
 			name: "with overridden resource id",
@@ -65,8 +69,11 @@ func TestRedisInstanceMetadataProvider_GetResourceID(t *testing.T) {
 					ResourceID: ptr.To("overridden-instance-id"),
 				},
 			},
-			projectID: "test-project",
-			want:      "//redis.googleapis.com/projects/test-project/locations/us-central1/instances/overridden-instance-id",
+			projectInfo: &resourcemanagerpb.Project{
+				Name:      "projects/987654321", // Example project name with number
+				ProjectId: "test-project",
+			},
+			want: "//redis.googleapis.com/projects/987654321/locations/us-central1/instances/overridden-instance-id",
 		},
 	}
 
@@ -74,7 +81,7 @@ func TestRedisInstanceMetadataProvider_GetResourceID(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			p := &RedisInstanceMetadataProvider{}
 
-			got := p.GetResourceID(tc.projectID, tc.r)
+			got := p.GetResourceID(tc.projectInfo, tc.r)
 
 			require.Equal(t, tc.want, got)
 		})

@@ -38,21 +38,24 @@ type TagsManager interface {
 	CreateKey(ctx context.Context, projectID string, key string) (*resourcemanagerpb.TagKey, error)
 	LookupValue(ctx context.Context, projectID string, key string, value string) (*resourcemanagerpb.TagValue, error)
 	CreateValue(ctx context.Context, projectID string, key string, value string) (*resourcemanagerpb.TagValue, error)
+	GetProjectInfo(ctx context.Context, projectID string) (*resourcemanagerpb.Project, error)
 }
 
 type tagsManager struct {
-	keysClient   *resourcemanager.TagKeysClient
-	valuesClient *resourcemanager.TagValuesClient
-	cache        *cache.Cache
+	keysClient     *resourcemanager.TagKeysClient
+	valuesClient   *resourcemanager.TagValuesClient
+	projectsClient *resourcemanager.ProjectsClient
+	cache          *cache.Cache
 }
 
 // TODO add logging to this file
 
-func NewTagsManager(keysClient *resourcemanager.TagKeysClient, valuesClient *resourcemanager.TagValuesClient) TagsManager {
+func NewTagsManager(keysClient *resourcemanager.TagKeysClient, valuesClient *resourcemanager.TagValuesClient, projectClient *resourcemanager.ProjectsClient) TagsManager {
 	return &tagsManager{
-		keysClient:   keysClient,
-		valuesClient: valuesClient,
-		cache:        cache.New(tagCacheDuration, tagCacheDuration),
+		keysClient:     keysClient,
+		valuesClient:   valuesClient,
+		projectsClient: projectClient,
+		cache:          cache.New(tagCacheDuration, tagCacheDuration),
 	}
 }
 
@@ -149,4 +152,29 @@ func cacheKeyTagKey(key string) string {
 
 func cacheKeyTagValue(key string, value string) string {
 	return fmt.Sprintf("value:%s:%s", key, value)
+}
+
+func (m *tagsManager) GetProjectInfo(ctx context.Context, projectID string) (*resourcemanagerpb.Project, error) {
+
+	if projectID == "" {
+		return nil, fmt.Errorf("project ID cannot be empty")
+	}
+
+	cacheKey := fmt.Sprintf("project:%s", projectID)
+	cachedProject, found := m.cache.Get(cacheKey)
+	if found {
+		return cachedProject.(*resourcemanagerpb.Project), nil
+	}
+
+	req := &resourcemanagerpb.GetProjectRequest{
+		Name: "projects/" + projectID,
+	}
+
+	project, err := m.projectsClient.GetProject(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get project: %v", err)
+	}
+
+	m.cache.Set(cacheKey, project, tagCacheDuration)
+	return project, nil
 }

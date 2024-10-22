@@ -22,9 +22,9 @@ This project helps solve this issue by adding a layer that syncs tag keys and va
 - Kubectl version v1.11.3+
 - Access to a Kubernetes v1.11.3+ cluster with Config Connector v1.121.0+ installed.
 
-### Deploying on the Cluster Using Helm
+### Deploying on the cluster using Helm
 
-**Install the chart from the Helm repository:**
+#### Install the chart from the Helm repository
 
 ```sh
 helm install gcp-config-connector-tagging-operator oci://ghcr.io/deliveryhero/gcp-config-connector-tagging-operator/helm-chart/gcp-config-connector-tagging-operator \
@@ -32,16 +32,15 @@ helm install gcp-config-connector-tagging-operator oci://ghcr.io/deliveryhero/gc
   --namespace "gcp-config-connector-tagging-operator-system"
 ```
 
-### Grant the `tagAdmin` Role to the Service Account
+#### Grant the `tagAdmin`  and `tagUser` roles to the Tagging Operator Kubenetes Service Account
 
-```sh
-PROJECT_ID=<your-gcp-project-id>
-PROJECT_NUMBER=<your-gcp-project-number>
-gcloud projects add-iam-policy-binding ${PROJECT_ID} \
-  --role=roles/resourcemanager.tagAdmin \
-  --member=principal://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${PROJECT_ID}.svc.id.goog/subject/ns/gcp-config-connector-tagging-operator-system/sa/gcp-config-connector-tagging-operator-controller-manager \
-  --condition=None
-```
+Default Tagging Operator Kubenetes Service Account User is `gcp-config-connector-tagging-operator-controller-manager` 
+
+Refer [Authenticate to Google Cloud APIs from GKE workloads](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity)
+
+#### Grant the `tagUser` role to the Config Connector Kubenetes Service Account
+
+Refer [Authenticate to Google Cloud APIs from GKE workloads](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity)
 
 ### Deploying on the Cluster
 

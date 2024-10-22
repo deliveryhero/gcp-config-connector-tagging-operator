@@ -19,11 +19,11 @@ package resources
 import (
 	"testing"
 
-	"k8s.io/utils/ptr"
-
+	"cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
 	sqlv1beta1 "github.com/GoogleCloudPlatform/k8s-config-connector/pkg/clients/generated/apis/sql/v1beta1"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 )
 
 func TestSQLInstanceMetadataProvider_GetResourceID(t *testing.T) {
@@ -35,10 +35,10 @@ func TestSQLInstanceMetadataProvider_GetResourceID(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name      string
-		r         *sqlv1beta1.SQLInstance
-		projectID string
-		want      string
+		name        string
+		r           *sqlv1beta1.SQLInstance
+		projectInfo *resourcemanagerpb.Project
+		want        string
 	}{
 		{
 			name: "with generated name",
@@ -51,8 +51,10 @@ func TestSQLInstanceMetadataProvider_GetResourceID(t *testing.T) {
 					Region: ptr.To("us-central1"),
 				},
 			},
-			projectID: "test-project",
-			want:      "//sqladmin.googleapis.com/projects/test-project/instances/test-instance",
+			projectInfo: &resourcemanagerpb.Project{
+				ProjectId: "test-project",
+			},
+			want: "//sqladmin.googleapis.com/projects/test-project/instances/test-instance",
 		},
 		{
 			name: "with overridden resource id",
@@ -66,8 +68,10 @@ func TestSQLInstanceMetadataProvider_GetResourceID(t *testing.T) {
 					ResourceID: ptr.To("overridden-instance-id"),
 				},
 			},
-			projectID: "test-project",
-			want:      "//sqladmin.googleapis.com/projects/test-project/instances/overridden-instance-id",
+			projectInfo: &resourcemanagerpb.Project{
+				ProjectId: "test-project",
+			},
+			want: "//sqladmin.googleapis.com/projects/test-project/instances/overridden-instance-id",
 		},
 	}
 
@@ -75,7 +79,7 @@ func TestSQLInstanceMetadataProvider_GetResourceID(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			p := &SQLInstanceMetadataProvider{}
 
-			got := p.GetResourceID(tc.projectID, tc.r)
+			got := p.GetResourceID(tc.projectInfo, tc.r)
 
 			require.Equal(t, tc.want, got)
 		})
