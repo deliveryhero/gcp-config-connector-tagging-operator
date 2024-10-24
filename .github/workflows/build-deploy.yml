@@ -54,6 +54,10 @@ jobs:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
           coverage-reports: cover.out
           force-coverage-parser: go
+      - uses: "google-github-actions/auth@v2"
+        with:
+          project_id: "dp-cap-co-dev-e2e-8520"
+          workload_identity_provider: "https://iam.googleapis.com/projects/379706009135/locations/global/workloadIdentityPools/gh-gcp-config-connector-tagging-/providers/gh-gcp-config-connector-tagging-" # "projects/123456789/locations/global/workloadIdentityPools/github/providers/my-repo"
 
   release:
     name: Release Package to GHCR
