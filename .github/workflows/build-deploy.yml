@@ -53,7 +53,9 @@ jobs:
           version: ">= 363.0.0"
 
       - name: "Use gcloud CLI"
-        run: "gcloud resource-manager tags bindings list --parent=//storage.googleapis.com/projects/_/buckets/test-jithu-tags --location=us"
+        run: |
+          gcloud auth activate-service-account --key-file=${{ env.GOOGLE_APPLICATION_CREDENTIALS }}
+          gcloud resource-manager tags bindings list --parent=//storage.googleapis.com/projects/_/buckets/test-jithu-tags --location=us
 
       - name: Test
         run: make verify test
