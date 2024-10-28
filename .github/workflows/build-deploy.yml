@@ -45,6 +45,14 @@ jobs:
         with:
           project_id: "dp-cap-co-dev-e2e-8520"
           workload_identity_provider: "projects/379706009135/locations/global/workloadIdentityPools/gh-gcp-config-connector-tagging-/providers/gh-gcp-config-connector-tagging-" # "projects/123456789/locations/global/workloadIdentityPools/github/providers/my-repo"
+
+      - name: "Set up Cloud SDK"
+        uses: "google-github-actions/setup-gcloud@f0990588f1e5b5af6827153b93673613abdc6ec7"
+        with:
+          version: ">= 363.0.0"
+      - name: "Use gcloud CLI"
+        run: "gcloud info"
+
       - name: Test
         run: make verify test
 
