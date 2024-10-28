@@ -51,14 +51,6 @@ jobs:
         with:
           version: ">= 363.0.0"
 
-      - name: Print Effective Permissions
-        run: |
-          gcloud iam service-accounts get-iam-policy \
-            --project "dp-cap-co-dev-e2e-8520" \
-            "projects/379706009135/locations/global/workloadIdentityPools/gh-gcp-config-connector-tagging-/subject/repo:deliveryhero/gcp-config-connector-tagging-operator:pull_request" \
-            > permissions.json
-          cat permissions.json
-
       - name: "Use gcloud CLI"
         run: "gcloud resource-manager tags bindings list --parent=//storage.googleapis.com/projects/_/buckets/test-jithu-tags --location=us"
 
