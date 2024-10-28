@@ -9,6 +9,7 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
   APP_NAME: gcp-config-connector-tagging-operator
+  E2EPROJECTID: dp-cap-co-dev-e2e-8520
 
 jobs:
   # lint:
@@ -44,9 +45,9 @@ jobs:
         if: github.repository == github.event.pull_request.head.repo.full_name
         uses: "google-github-actions/auth@8254fb75a33b976a221574d287e93919e6a36f70"
         with:
-          project_id: "dp-cap-co-dev-e2e-8520"
+          project_id: ${{ env.E2EPROJECTID }}
           workload_identity_provider: "projects/379706009135/locations/global/workloadIdentityPools/gh-gcp-config-connector-tagging-/providers/gh-gcp-config-connector-tagging-" # "projects/123456789/locations/global/workloadIdentityPools/github/providers/my-repo"
-          service_account: "wif-gcp-config-connector-taggi@dp-cap-co-dev-e2e-8520.iam.gserviceaccount.com"
+          service_account: "wif-gcp-config-connector-taggi@${{ env.E2EPROJECTID }}.iam.gserviceaccount.com"
       - name: "Set up Cloud SDK"
         uses: "google-github-actions/setup-gcloud@f0990588f1e5b5af6827153b93673613abdc6ec7"
         with:
