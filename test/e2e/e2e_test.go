@@ -17,14 +17,15 @@ limitations under the License.
 package e2e
 
 import (
-	resourcemanager "cloud.google.com/go/resourcemanager/apiv3"
 	"context"
 	"fmt"
-	"google.golang.org/api/option"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
+
+	resourcemanager "cloud.google.com/go/resourcemanager/apiv3"
+	"google.golang.org/api/option"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -64,7 +65,7 @@ var _ = Describe("controller", Ordered, func() {
 			var err error
 
 			// projectimage stores the name of the image used in the example
-			var projectimage = "ghcr.io/deliveryhero/gcp-config-connector-tagging-operator:e2e"
+			var projectimage = "ghcr.io/deliveryhero/gcp-config-connector-tagging-operator:1.1.2"
 
 			By("building the manager(Operator) image")
 			cmd := exec.Command("make", "docker-build", fmt.Sprintf("IMG=%s", projectimage))
