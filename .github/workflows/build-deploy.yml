@@ -65,19 +65,6 @@ jobs:
       - name: Create k8s Kind Cluster
         uses: helm/kind-action@0025e74a8c7512023d06dc019c617aa3cf561fde
 
-      - name: Log in to the Container registry
-        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Check Kind Cluster
-        run: |
-          kubectl run --image=nginx test-nginx --restart=Never --command -- sleep 3600
-          kind load docker-image ghcr.io/deliveryhero/gcp-config-connector-tagging-operator:1.1.2 --name kind || echo "Failed to load image. Check if the image exists and is accessible."
-          kubectl get pods
-
       - name: Run E2E Tests
         run: |
           make test-e2e
