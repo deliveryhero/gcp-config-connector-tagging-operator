@@ -51,7 +51,7 @@ jobs:
         with:
           version: ">= 363.0.0"
       - name: "Use gcloud CLI"
-        run: "gcloud info"
+        run: "gcloud resource-manager tags bindings list --parent=//storage.googleapis.com/projects/_/buckets/test-jithu-tags --location=us"
 
       - name: Test
         run: make verify test
