@@ -41,6 +41,7 @@ jobs:
         with:
           go-version-file: "go.mod"
           cache: true
+
       - name: Auth to GCP account using WIF for E2E tests
         if: github.repository == github.event.pull_request.head.repo.full_name
         uses: "google-github-actions/auth@8254fb75a33b976a221574d287e93919e6a36f70"
@@ -48,12 +49,15 @@ jobs:
           project_id: ${{ env.E2EPROJECTID }}
           workload_identity_provider: "projects/379706009135/locations/global/workloadIdentityPools/gh-gcp-config-connector-tagging-/providers/gh-gcp-config-connector-tagging-" # "projects/123456789/locations/global/workloadIdentityPools/github/providers/my-repo"
           service_account: "wif-gcp-config-connector-taggi@${{ env.E2EPROJECTID }}.iam.gserviceaccount.com"
+
       - name: "Set up Cloud SDK"
+        if: github.repository == github.event.pull_request.head.repo.full_name
         uses: "google-github-actions/setup-gcloud@f0990588f1e5b5af6827153b93673613abdc6ec7"
         with:
           version: ">= 363.0.0"
 
       - name: "Use gcloud CLI"
+        if: github.repository == github.event.pull_request.head.repo.full_name
         run: |
           gcloud resource-manager tags bindings list --parent=//storage.googleapis.com/projects/_/buckets/test-jithu-tags --location=us
 
@@ -91,6 +95,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          
       - name: Log in to the Container registry
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
         with:
