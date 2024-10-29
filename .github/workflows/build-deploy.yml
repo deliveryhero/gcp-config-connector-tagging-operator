@@ -43,6 +43,9 @@ jobs:
           go-version-file: "go.mod"
           cache: true
 
+      - name: Run Unit and Integration Test
+        run: make verify test
+
       - name: Auth to GCP account using WIF for E2E tests
         if: github.repository == github.event.pull_request.head.repo.full_name
         uses: "google-github-actions/auth@8254fb75a33b976a221574d287e93919e6a36f70"
@@ -73,9 +76,6 @@ jobs:
         run: |
           kubectl cluster-info
           make test-e2e
-
-      - name: Run Unit and Integration Test
-        run: make verify test
 
       - name: Run Codacy Analysis
         if: github.repository == github.event.pull_request.head.repo.full_name
