@@ -17,14 +17,15 @@ limitations under the License.
 package e2e
 
 import (
-	resourcemanager "cloud.google.com/go/resourcemanager/apiv3"
 	"context"
 	"fmt"
-	"google.golang.org/api/option"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
+
+	resourcemanager "cloud.google.com/go/resourcemanager/apiv3"
+	"google.golang.org/api/option"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
