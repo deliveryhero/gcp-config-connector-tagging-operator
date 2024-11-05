@@ -1,0 +1,27 @@
+# permissions for end users to view cronjobs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: cronjob-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: gcp-config-connector-tagging-operator
+    app.kubernetes.io/part-of: gcp-config-connector-tagging-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: cronjob-viewer-role
+rules:
+- apiGroups:
+  - batch.gdp.deliveryhero.io
+  resources:
+  - cronjobs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - batch.gdp.deliveryhero.io
+  resources:
+  - cronjobs/status
+  verbs:
+  - get

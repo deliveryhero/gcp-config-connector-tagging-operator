@@ -6,6 +6,32 @@ metadata:
   {{- include "gcp-config-connector-tagging-operator.labels" . | nindent 4 }}
 rules:
 - apiGroups:
+  - batch.gdp.deliveryhero.io
+  resources:
+  - cronjobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - batch.gdp.deliveryhero.io
+  resources:
+  - cronjobs/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - batch.gdp.deliveryhero.io
+  resources:
+  - cronjobs/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - kms.cnrm.cloud.google.com
   resources:
   - kmskeyrings

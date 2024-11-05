@@ -42,7 +42,9 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	batchv1 "github.com/deliveryhero/gcp-config-connector-tagging-operator/api/batch/v1"
 	"github.com/deliveryhero/gcp-config-connector-tagging-operator/internal/controller"
+	batchcontroller "github.com/deliveryhero/gcp-config-connector-tagging-operator/internal/controller/batch"
 	"github.com/deliveryhero/gcp-config-connector-tagging-operator/internal/controller/resources"
 	"github.com/deliveryhero/gcp-config-connector-tagging-operator/internal/gcp"
 	"github.com/deliveryhero/gcp-config-connector-tagging-operator/internal/util"
@@ -62,6 +64,7 @@ func init() {
 	utilruntime.Must(redisv1beta1.AddToScheme(scheme))
 	utilruntime.Must(kmsv1beta1.AddToScheme(scheme))
 
+	utilruntime.Must(batchv1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -198,6 +201,13 @@ func main() {
 	controller.CreateTaggableResourceController(mgr, tagsManager, &resources.SQLInstanceMetadataProvider{}, labelMatcher)
 	controller.CreateTaggableResourceController(mgr, tagsManager, &resources.RedisInstanceMetadataProvider{}, labelMatcher)
 	controller.CreateTaggableResourceController(mgr, tagsManager, &resources.KMSKeyRingMetadataProvider{}, labelMatcher)
+	if err = (&batchcontroller.CronJobReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "CronJob")
+		os.Exit(1)
+	}
 	// +kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

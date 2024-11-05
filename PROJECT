@@ -5,6 +5,7 @@
 domain: gdp.deliveryhero.io
 layout:
 - go.kubebuilder.io/v4
+multigroup: true
 projectName: gcp-config-connector-tagging-operator
 repo: github.com/deliveryhero/gcp-config-connector-tagging-operator
 resources:
@@ -18,4 +19,13 @@ resources:
   group: kms
   kind: KMSKeyRing
   version: v1beta1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: gdp.deliveryhero.io
+  group: batch
+  kind: CronJob
+  path: github.com/deliveryhero/gcp-config-connector-tagging-operator/api/batch/v1
+  version: v1
 version: "3"
