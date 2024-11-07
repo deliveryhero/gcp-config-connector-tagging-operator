@@ -101,14 +101,27 @@ func (r *TaggableResourceReconciler[T, P, PT]) Reconcile(ctx context.Context, re
 			log.Info("Deleting the tag keys and values after E2E")
 			projectID := r.determineProjectID(ctx, resource)
 			labels := resource.GetLabels()
+			// for k, v := range r.LabelMatcher(labels) {
+			// 	if err := r.TagsManager.DeleteValue(ctx, projectID, k, v); err != nil {
+			// 		return ctrl.Result{Requeue: true, RequeueAfter: 10 * time.Second}, err
+			// 	}
+			// 	if err := r.TagsManager.DeleteKeyIfUnused(ctx, projectID, k); err != nil {
+			// 		return ctrl.Result{Requeue: true, RequeueAfter: 10 * time.Second}, err
+			// 	}
+			// }
 			for k, v := range r.LabelMatcher(labels) {
-				if err := r.TagsManager.DeleteValue(ctx, projectID, k, v); err != nil {
+				valueID, keyID, err := r.getValueAndKeyID(ctx, projectID, k, v)
+				if err != nil {
 					return ctrl.Result{Requeue: true, RequeueAfter: 10 * time.Second}, err
 				}
-				if err := r.TagsManager.DeleteKeyIfUnused(ctx, projectID, k); err != nil {
+				if err := r.TagsManager.DeleteValue(ctx, projectID, keyID, valueID); err != nil {
+					return ctrl.Result{Requeue: true, RequeueAfter: 10 * time.Second}, err
+				}
+				if err := r.TagsManager.DeleteKeyIfUnused(ctx, projectID, keyID); err != nil {
 					return ctrl.Result{Requeue: true, RequeueAfter: 10 * time.Second}, err
 				}
 			}
+
 		}
 	}
 
@@ -332,6 +345,20 @@ func (r *TaggableResourceReconciler[T, P, PT]) handleTagBindingsDeletion(ctx con
 	}
 
 	return nil
+}
+
+func (r *TaggableResourceReconciler[T, P, PT]) getValueAndKeyID(ctx context.Context, projectID, key, value string) (string, string, error) {
+	tagValue, err := r.TagsManager.LookupValue(ctx, projectID, key, value)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to lookup tag value: %w", err)
+	}
+
+	tagKey, err := r.TagsManager.LookupKey(ctx, projectID, key)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to lookup tag key: %w", err)
+	}
+
+	return tagValue.Name, tagKey.Name, nil
 }
 
 func CreateTaggableResourceController[T any, P ResourceMetadataProvider[T], PT ResourcePointer[T]](mgr ctrl.Manager, tagsManager gcp.TagsManager, provider P, labelMatcher func(map[string]string) map[string]string) {
