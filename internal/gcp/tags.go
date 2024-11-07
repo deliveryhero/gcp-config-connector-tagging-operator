@@ -39,6 +39,8 @@ type TagsManager interface {
 	LookupValue(ctx context.Context, projectID string, key string, value string) (*resourcemanagerpb.TagValue, error)
 	CreateValue(ctx context.Context, projectID string, key string, value string) (*resourcemanagerpb.TagValue, error)
 	GetProjectInfo(ctx context.Context, projectID string) (*resourcemanagerpb.Project, error)
+	DeleteValue(ctx context.Context, projectID string, key string, value string) error
+	DeleteKeyIfUnused(ctx context.Context, projectID string, key string) error
 }
 
 type tagsManager struct {
@@ -177,4 +179,40 @@ func (m *tagsManager) GetProjectInfo(ctx context.Context, projectID string) (*re
 
 	m.cache.Set(cacheKey, project, tagCacheDuration)
 	return project, nil
+}
+
+func (m *tagsManager) DeleteValue(ctx context.Context, projectID string, key string, value string) error {
+	name := fmt.Sprintf("projects/%s/locations/global/tagValues/%s/%s", projectID, key, value)
+
+	req := &resourcemanagerpb.DeleteTagValueRequest{
+		Name: name,
+	}
+
+	_, err := m.valuesClient.DeleteTagValue(ctx, req)
+	if err != nil {
+		return nil // Tag value already in use or deleted, consider this a success
+	}
+
+	m.cache.Delete(cacheKeyTagValue(key, value))
+	return nil
+}
+
+func (m *tagsManager) DeleteKeyIfUnused(ctx context.Context, projectID string, key string) error {
+	name := fmt.Sprintf("projects/%s/locations/global/tagKeys/%s", projectID, key)
+
+	// Attempt to delete the tag key
+	req := &resourcemanagerpb.DeleteTagKeyRequest{
+		Name: name,
+	}
+	_, err := m.keysClient.DeleteTagKey(ctx, req)
+	if err != nil {
+		// If the error is anything other than "already in use", return it
+		var ae *apierror.APIError
+		if !errors.As(err, &ae) || ae.GRPCStatus().Code() != codes.FailedPrecondition {
+			return fmt.Errorf("failed to delete tag key: %w", err)
+		}
+	}
+
+	m.cache.Delete(cacheKeyTagKey(key))
+	return nil
 }
