@@ -209,6 +209,7 @@ func (m *tagsManager) DeleteKeyIfUnused(ctx context.Context, projectID string, k
 		if !errors.As(err, &ae) || ae.GRPCStatus().Code() != codes.FailedPrecondition {
 			return fmt.Errorf("failed to delete tag key: %w", err)
 		}
+		return fmt.Errorf("failed to wait for tag key creation: %w", err)
 	}
 
 	m.cache.Delete(cacheKeyTagKey(key))

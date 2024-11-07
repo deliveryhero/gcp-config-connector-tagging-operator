@@ -101,15 +101,8 @@ func (r *TaggableResourceReconciler[T, P, PT]) Reconcile(ctx context.Context, re
 			log.Info("Deleting the tag keys and values after E2E")
 			projectID := r.determineProjectID(ctx, resource)
 			labels := resource.GetLabels()
-			// for k, v := range r.LabelMatcher(labels) {
-			// 	if err := r.TagsManager.DeleteValue(ctx, projectID, k, v); err != nil {
-			// 		return ctrl.Result{Requeue: true, RequeueAfter: 10 * time.Second}, err
-			// 	}
-			// 	if err := r.TagsManager.DeleteKeyIfUnused(ctx, projectID, k); err != nil {
-			// 		return ctrl.Result{Requeue: true, RequeueAfter: 10 * time.Second}, err
-			// 	}
-			// }
 			for k, v := range r.LabelMatcher(labels) {
+				// return tagValue.Name, tagKey.Name, nil
 				valueID, keyID, err := r.getValueAndKeyID(ctx, projectID, k, v)
 				if err != nil {
 					return ctrl.Result{Requeue: true, RequeueAfter: 10 * time.Second}, err
@@ -123,6 +116,8 @@ func (r *TaggableResourceReconciler[T, P, PT]) Reconcile(ctx context.Context, re
 			}
 
 		}
+		// Stop reconciliation as the resource is being deleted
+		return ctrl.Result{}, nil
 	}
 
 	if !controllerutil.ContainsFinalizer(resource, taggableResourceFinalizer) {
