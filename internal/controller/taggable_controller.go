@@ -101,6 +101,7 @@ func (r *TaggableResourceReconciler[T, P, PT]) Reconcile(ctx context.Context, re
 			projectID := r.determineProjectID(ctx, resource)
 			labels := resource.GetLabels()
 			for k, v := range r.LabelMatcher(labels) {
+				log.Info("key %s value %s", k, v)
 				if err := r.TagsManager.DeleteValue(ctx, projectID, k, v); err != nil {
 					return ctrl.Result{Requeue: true, RequeueAfter: 10 * time.Second}, err
 				}
