@@ -26,7 +26,6 @@ import (
 	"cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
 	"github.com/googleapis/gax-go/v2/apierror"
 	cache "github.com/patrickmn/go-cache"
-	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc/codes"
 )
 
@@ -190,7 +189,6 @@ func (m *tagsManager) DeleteValue(ctx context.Context, projectID string, key str
 	}
 
 	_, err := m.valuesClient.DeleteTagValue(ctx, req)
-	log.Error(err, "failed to delete tag value")
 	if err != nil {
 		return nil // Tag value already in use or deleted, consider this a success
 	}
