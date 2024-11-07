@@ -93,7 +93,11 @@ func (r *TaggableResourceReconciler[T, P, PT]) Reconcile(ctx context.Context, re
 				// If there's an error handling tag bindings, requeue for later
 				return ctrl.Result{Requeue: true, RequeueAfter: 10 * time.Second}, err
 			}
-
+			// Remove finalizer to allow Kubernetes to delete the resource
+			controllerutil.RemoveFinalizer(resource, taggableResourceFinalizer)
+			if err := r.Update(ctx, resource); err != nil {
+				return ctrl.Result{}, err
+			}
 			projectID := r.determineProjectID(ctx, resource)
 			labels := resource.GetLabels()
 			for k, v := range r.LabelMatcher(labels) {
@@ -103,12 +107,6 @@ func (r *TaggableResourceReconciler[T, P, PT]) Reconcile(ctx context.Context, re
 				if err := r.TagsManager.DeleteKeyIfUnused(ctx, projectID, k); err != nil {
 					return ctrl.Result{Requeue: true, RequeueAfter: 10 * time.Second}, err
 				}
-			}
-
-			// Remove finalizer to allow Kubernetes to delete the resource
-			controllerutil.RemoveFinalizer(resource, taggableResourceFinalizer)
-			if err := r.Update(ctx, resource); err != nil {
-				return ctrl.Result{}, err
 			}
 		}
 		// Stop reconciliation as the resource is being deleted
