@@ -197,7 +197,7 @@ func (m *tagsManager) DeleteValue(ctx context.Context, projectID string, key str
 }
 
 func (m *tagsManager) DeleteKeyIfUnused(ctx context.Context, projectID string, key string) error {
-
+	key = fmt.Sprintf("tagKeys/%s", key)
 	// Attempt to delete the tag key
 	req := &resourcemanagerpb.DeleteTagKeyRequest{
 		Name: key,
