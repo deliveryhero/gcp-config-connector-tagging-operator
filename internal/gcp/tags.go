@@ -182,10 +182,9 @@ func (m *tagsManager) GetProjectInfo(ctx context.Context, projectID string) (*re
 }
 
 func (m *tagsManager) DeleteValue(ctx context.Context, projectID string, key string, value string) error {
-	name := fmt.Sprintf("%s", value)
 
 	req := &resourcemanagerpb.DeleteTagValueRequest{
-		Name: name,
+		Name: value,
 	}
 
 	_, err := m.valuesClient.DeleteTagValue(ctx, req)
@@ -198,11 +197,10 @@ func (m *tagsManager) DeleteValue(ctx context.Context, projectID string, key str
 }
 
 func (m *tagsManager) DeleteKeyIfUnused(ctx context.Context, projectID string, key string) error {
-	name := fmt.Sprintf("%s", key)
 
 	// Attempt to delete the tag key
 	req := &resourcemanagerpb.DeleteTagKeyRequest{
-		Name: name,
+		Name: key,
 	}
 	_, err := m.keysClient.DeleteTagKey(ctx, req)
 	if err != nil {
