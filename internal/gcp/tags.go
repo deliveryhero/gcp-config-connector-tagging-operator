@@ -219,10 +219,10 @@ func (m *tagsManager) DeleteKeyIfUnused(ctx context.Context, projectID string, k
 	_, err = m.keysClient.DeleteTagKey(ctx, req)
 	if err != nil {
 		// Handle other errors but ignore "already in use"
-		var ae *apierror.APIError
-		if !errors.As(err, &ae) && ae.GRPCStatus().Code() != codes.FailedPrecondition {
-			return fmt.Errorf("failed to delete tag key: %w", err)
-		}
+		// var ae *apierror.APIError
+		// if !errors.As(err, &ae) && ae.GRPCStatus().Code() != codes.FailedPrecondition {
+		return fmt.Errorf("failed to delete tag key: %w", err)
+		// }
 	}
 
 	m.cache.Delete(cacheKeyTagKey(key))
