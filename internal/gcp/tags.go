@@ -194,7 +194,7 @@ func (m *tagsManager) DeleteValue(ctx context.Context, projectID string, key str
 
 	_, err = op.Wait(ctx)
 	if err != nil {
-		return nil // Add error TODO
+		return fmt.Errorf("failed to delete the tagValue %w", err)
 	}
 	// _, err := m.valuesClient.DeleteTagValue(ctx, req)
 	// if err != nil {
@@ -218,7 +218,7 @@ func (m *tagsManager) DeleteKeyIfUnused(ctx context.Context, projectID string, k
 
 	_, err = op.Wait(ctx)
 	if err != nil {
-		return nil // Add error TODO
+		return fmt.Errorf("failed to delete the tagKey %w", err)
 	}
 	// if err != nil {
 	// 	// Handle other errors but ignore "already in use"
