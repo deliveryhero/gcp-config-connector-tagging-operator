@@ -197,8 +197,8 @@ func (m *tagsManager) DeleteValue(ctx context.Context, projectID string, key str
 }
 
 func (m *tagsManager) DeleteKeyIfUnused(ctx context.Context, projectID string, key string) error {
-	key = fmt.Sprintf("tagKeys/%s", key)
 	// Attempt to delete the tag key
+	time.Sleep(15 * time.Second)
 	req := &resourcemanagerpb.DeleteTagKeyRequest{
 		Name: key,
 	}
@@ -209,7 +209,7 @@ func (m *tagsManager) DeleteKeyIfUnused(ctx context.Context, projectID string, k
 		if !errors.As(err, &ae) || ae.GRPCStatus().Code() != codes.FailedPrecondition {
 			return fmt.Errorf("failed to delete tag key: %w", err)
 		}
-		return fmt.Errorf("failed to wait for tag key creation: %w", err)
+		return fmt.Errorf("failed to wait for tag key deletion: %w", err)
 	}
 
 	m.cache.Delete(cacheKeyTagKey(key))
