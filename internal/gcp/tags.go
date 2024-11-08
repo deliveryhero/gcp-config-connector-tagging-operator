@@ -209,7 +209,7 @@ func (m *tagsManager) DeleteKeyIfUnused(ctx context.Context, projectID string, k
 		}
 	} else {
 		// Values found, so the key is in use
-		return nil // Or return an error if you want to explicitly indicate this
+		return nil
 	}
 
 	// Attempt to delete the tag key

@@ -158,6 +158,8 @@ kind: StorageBucket
 metadata:
   labels:
     foo: bar
+	key1: value1
+	key2: value2
   name: %s
   namespace: %s
 spec:
