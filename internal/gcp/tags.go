@@ -188,10 +188,19 @@ func (m *tagsManager) DeleteValue(ctx context.Context, projectID string, key str
 		Name: value,
 	}
 
-	_, err := m.valuesClient.DeleteTagValue(ctx, req)
+	op, err := m.valuesClient.DeleteTagValue(ctx, req)
 	if err != nil {
 		return nil // Tag value already in use or deleted, consider this a success
 	}
+
+	_, err = op.Wait(ctx)
+	if err != nil {
+		return nil // Add error TODO
+	}
+	// _, err := m.valuesClient.DeleteTagValue(ctx, req)
+	// if err != nil {
+	// 	return nil // Tag value already in use or deleted, consider this a success
+	// }
 
 	m.cache.Delete(cacheKeyTagValue(key, value))
 	return nil
