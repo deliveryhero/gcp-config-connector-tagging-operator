@@ -191,15 +191,10 @@ func (m *tagsManager) DeleteValue(ctx context.Context, projectID string, key str
 	if err != nil {
 		return nil // Tag value already in use or deleted, consider this a success
 	}
-
 	_, err = op.Wait(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to delete the tagValue %w", err)
 	}
-	// _, err := m.valuesClient.DeleteTagValue(ctx, req)
-	// if err != nil {
-	// 	return nil // Tag value already in use or deleted, consider this a success
-	// }
 
 	m.cache.Delete(cacheKeyTagValue(key, value))
 	return nil
@@ -220,13 +215,6 @@ func (m *tagsManager) DeleteKeyIfUnused(ctx context.Context, projectID string, k
 	if err != nil {
 		return fmt.Errorf("failed to delete the tagKey %w", err)
 	}
-	// if err != nil {
-	// 	// Handle other errors but ignore "already in use"
-	// 	// var ae *apierror.APIError
-	// 	// if !errors.As(err, &ae) && ae.GRPCStatus().Code() != codes.FailedPrecondition {
-	// 	return fmt.Errorf("failed to delete tag key: %w", err)
-	// 	// }
-	// }
 	m.cache.Delete(cacheKeyTagKey(key))
 	return nil
 }
