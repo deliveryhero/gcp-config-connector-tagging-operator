@@ -26,6 +26,7 @@ import (
 	"cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
 	"github.com/googleapis/gax-go/v2/apierror"
 	cache "github.com/patrickmn/go-cache"
+	"google.golang.org/api/iterator"
 	"google.golang.org/grpc/codes"
 )
 
@@ -197,19 +198,31 @@ func (m *tagsManager) DeleteValue(ctx context.Context, projectID string, key str
 }
 
 func (m *tagsManager) DeleteKeyIfUnused(ctx context.Context, projectID string, key string) error {
+	// Check if the key has any values associated with it
+	valuesIter := m.valuesClient.ListTagValues(ctx, &resourcemanagerpb.ListTagValuesRequest{
+		Parent: key,
+	})
+	_, err := valuesIter.Next()
+	if err != nil {
+		if !errors.Is(err, iterator.Done) { // No values found
+			return fmt.Errorf("failed to list tag values for key %s: %w", key, err)
+		}
+	} else {
+		// Values found, so the key is in use
+		return nil // Or return an error if you want to explicitly indicate this
+	}
+
 	// Attempt to delete the tag key
-	time.Sleep(15 * time.Second)
 	req := &resourcemanagerpb.DeleteTagKeyRequest{
 		Name: key,
 	}
-	_, err := m.keysClient.DeleteTagKey(ctx, req)
+	_, err = m.keysClient.DeleteTagKey(ctx, req)
 	if err != nil {
-		// If the error is anything other than "already in use", return it
+		// Handle other errors but ignore "already in use"
 		var ae *apierror.APIError
-		if !errors.As(err, &ae) || ae.GRPCStatus().Code() != codes.FailedPrecondition {
+		if !errors.As(err, &ae) && ae.GRPCStatus().Code() != codes.FailedPrecondition {
 			return fmt.Errorf("failed to delete tag key: %w", err)
 		}
-		return fmt.Errorf("failed to wait for tag key deletion: %w", err)
 	}
 
 	m.cache.Delete(cacheKeyTagKey(key))
