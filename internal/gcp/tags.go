@@ -39,7 +39,7 @@ type TagsManager interface {
 	LookupValue(ctx context.Context, projectID string, key string, value string) (*resourcemanagerpb.TagValue, error)
 	CreateValue(ctx context.Context, projectID string, key string, value string) (*resourcemanagerpb.TagValue, error)
 	GetProjectInfo(ctx context.Context, projectID string) (*resourcemanagerpb.Project, error)
-	DeleteValue(ctx context.Context, projectID string, key string, value string) error
+	DeleteValueIfUnused(ctx context.Context, projectID string, key string, value string) error
 	DeleteKeyIfUnused(ctx context.Context, projectID string, key string) error
 }
 
@@ -181,7 +181,7 @@ func (m *tagsManager) GetProjectInfo(ctx context.Context, projectID string) (*re
 	return project, nil
 }
 
-func (m *tagsManager) DeleteValue(ctx context.Context, projectID string, key string, value string) error {
+func (m *tagsManager) DeleteValueIfUnused(ctx context.Context, projectID string, key string, value string) error {
 
 	req := &resourcemanagerpb.DeleteTagValueRequest{
 		Name: value,
@@ -189,8 +189,14 @@ func (m *tagsManager) DeleteValue(ctx context.Context, projectID string, key str
 
 	op, err := m.valuesClient.DeleteTagValue(ctx, req)
 	if err != nil {
-		return nil // Tag value already in use or deleted, consider this a success
+		var ae *apierror.APIError
+		if errors.As(err, &ae) && (ae.GRPCStatus().Code() == codes.FailedPrecondition || ae.GRPCStatus().Code() == codes.NotFound) {
+			// tag value is in use
+			return nil
+		}
+		return fmt.Errorf("failed to call tagValue deletion request: %w", err)
 	}
+
 	_, err = op.Wait(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to delete the tagValue %w", err)
@@ -209,10 +215,10 @@ func (m *tagsManager) DeleteKeyIfUnused(ctx context.Context, projectID string, k
 	op, err := m.keysClient.DeleteTagKey(ctx, req)
 	if err != nil {
 		var ae *apierror.APIError
-		if errors.As(err, &ae) && ae.GRPCStatus().Code() == codes.FailedPrecondition {
+		if errors.As(err, &ae) && (ae.GRPCStatus().Code() == codes.FailedPrecondition || ae.GRPCStatus().Code() == codes.NotFound) {
 			return nil
 		}
-		return fmt.Errorf("failed to delete tagkey: %w", err)
+		return fmt.Errorf("failed to call tagKey deletion request: %w", err)
 	}
 
 	_, err = op.Wait(ctx)

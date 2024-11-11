@@ -107,7 +107,7 @@ func (r *TaggableResourceReconciler[T, P, PT]) Reconcile(ctx context.Context, re
 				if err != nil {
 					return ctrl.Result{Requeue: true, RequeueAfter: 10 * time.Second}, err
 				}
-				if err := r.TagsManager.DeleteValue(ctx, projectID, keyID, valueID); err != nil {
+				if err := r.TagsManager.DeleteValueIfUnused(ctx, projectID, keyID, valueID); err != nil {
 					return ctrl.Result{Requeue: true, RequeueAfter: 10 * time.Second}, err
 				}
 				if err := r.TagsManager.DeleteKeyIfUnused(ctx, projectID, keyID); err != nil {
