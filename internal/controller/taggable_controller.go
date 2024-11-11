@@ -337,6 +337,11 @@ func (r *TaggableResourceReconciler[T, P, PT]) handleTagBindingsDeletion(ctx con
 				return fmt.Errorf("error deleting tag binding %s: %w", tagBinding.Name, err)
 			}
 		}
+		// Cleanup finalizer
+		controllerutil.RemoveFinalizer(&tagBinding, "cnrm.cloud.google.com/finalizer")
+		if err := r.Update(ctx, &tagBinding); err != nil {
+			return fmt.Errorf("error removing finalizer from resource %s: %w", tagBinding.Name, err)
+		}
 	}
 
 	return nil
