@@ -98,6 +98,23 @@ func (r *TaggableResourceReconciler[T, P, PT]) Reconcile(ctx context.Context, re
 			if err := r.Update(ctx, resource); err != nil {
 				return ctrl.Result{}, err
 			}
+			log.Info("resource deletion request received trying to delete associated tagValue/tagKey if unused")
+			projectID := r.determineProjectID(ctx, resource)
+			labels := resource.GetLabels()
+			for k, v := range r.LabelMatcher(labels) {
+				// return tagValue.Name, tagKey.Name, nil
+				valueID, keyID, err := r.getValueAndKeyID(ctx, projectID, k, v)
+				if err != nil {
+					return ctrl.Result{Requeue: true, RequeueAfter: 10 * time.Second}, err
+				}
+				if err := r.TagsManager.DeleteValueIfUnused(ctx, projectID, keyID, valueID); err != nil {
+					return ctrl.Result{Requeue: true, RequeueAfter: 10 * time.Second}, err
+				}
+				if err := r.TagsManager.DeleteKeyIfUnused(ctx, projectID, keyID); err != nil {
+					return ctrl.Result{Requeue: true, RequeueAfter: 10 * time.Second}, err
+				}
+			}
+
 		}
 		// Stop reconciliation as the resource is being deleted
 		return ctrl.Result{}, nil
@@ -320,9 +337,28 @@ func (r *TaggableResourceReconciler[T, P, PT]) handleTagBindingsDeletion(ctx con
 				return fmt.Errorf("error deleting tag binding %s: %w", tagBinding.Name, err)
 			}
 		}
+		// Cleanup finalizer
+		controllerutil.RemoveFinalizer(&tagBinding, "cnrm.cloud.google.com/finalizer")
+		if err := r.Update(ctx, &tagBinding); err != nil {
+			return fmt.Errorf("error removing finalizer from resource %s: %w", tagBinding.Name, err)
+		}
 	}
 
 	return nil
+}
+
+func (r *TaggableResourceReconciler[T, P, PT]) getValueAndKeyID(ctx context.Context, projectID, key, value string) (string, string, error) {
+	tagValue, err := r.TagsManager.LookupValue(ctx, projectID, key, value)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to lookup tag value: %w", err)
+	}
+
+	tagKey, err := r.TagsManager.LookupKey(ctx, projectID, key)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to lookup tag key: %w", err)
+	}
+
+	return tagValue.Name, tagKey.Name, nil
 }
 
 func CreateTaggableResourceController[T any, P ResourceMetadataProvider[T], PT ResourcePointer[T]](mgr ctrl.Manager, tagsManager gcp.TagsManager, provider P, labelMatcher func(map[string]string) map[string]string) {

@@ -39,6 +39,8 @@ type TagsManager interface {
 	LookupValue(ctx context.Context, projectID string, key string, value string) (*resourcemanagerpb.TagValue, error)
 	CreateValue(ctx context.Context, projectID string, key string, value string) (*resourcemanagerpb.TagValue, error)
 	GetProjectInfo(ctx context.Context, projectID string) (*resourcemanagerpb.Project, error)
+	DeleteValueIfUnused(ctx context.Context, projectID string, key string, value string) error
+	DeleteKeyIfUnused(ctx context.Context, projectID string, key string) error
 }
 
 type tagsManager struct {
@@ -177,4 +179,52 @@ func (m *tagsManager) GetProjectInfo(ctx context.Context, projectID string) (*re
 
 	m.cache.Set(cacheKey, project, tagCacheDuration)
 	return project, nil
+}
+
+func (m *tagsManager) DeleteValueIfUnused(ctx context.Context, projectID string, key string, value string) error {
+
+	req := &resourcemanagerpb.DeleteTagValueRequest{
+		Name: value,
+	}
+
+	op, err := m.valuesClient.DeleteTagValue(ctx, req)
+	if err != nil {
+		var ae *apierror.APIError
+		if errors.As(err, &ae) && (ae.GRPCStatus().Code() == codes.FailedPrecondition || ae.GRPCStatus().Code() == codes.NotFound) {
+			// tag value is in use
+			return nil
+		}
+		return fmt.Errorf("failed to call tagValue deletion request: %w", err)
+	}
+
+	_, err = op.Wait(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to delete the tagValue %w", err)
+	}
+
+	m.cache.Delete(cacheKeyTagValue(key, value))
+	return nil
+}
+
+func (m *tagsManager) DeleteKeyIfUnused(ctx context.Context, projectID string, key string) error {
+
+	// Attempt to delete the tag key
+	req := &resourcemanagerpb.DeleteTagKeyRequest{
+		Name: key,
+	}
+	op, err := m.keysClient.DeleteTagKey(ctx, req)
+	if err != nil {
+		var ae *apierror.APIError
+		if errors.As(err, &ae) && (ae.GRPCStatus().Code() == codes.FailedPrecondition || ae.GRPCStatus().Code() == codes.NotFound) {
+			return nil
+		}
+		return fmt.Errorf("failed to call tagKey deletion request: %w", err)
+	}
+
+	_, err = op.Wait(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to delete the tagKey %w", err)
+	}
+	m.cache.Delete(cacheKeyTagKey(key))
+	return nil
 }
