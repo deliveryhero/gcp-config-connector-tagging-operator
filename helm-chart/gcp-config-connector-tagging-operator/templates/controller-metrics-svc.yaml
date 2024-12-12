@@ -9,6 +9,6 @@ spec:
   type: {{ .Values.controllerMetricsSvc.type }}
   selector:
     control-plane: controller-manager
-  {{- include "gcp-config-connector-tagging-operator.selectorLabels" . | nindent 4 }}
+    {{- include "gcp-config-connector-tagging-operator.selectorLabels" . | nindent 4 }}
   ports:
-	{{- .Values.controllerMetricsSvc.ports | toYaml | nindent 2 }}
+  {{- .Values.controllerMetricsSvc.ports | toYaml | nindent 2 }}
