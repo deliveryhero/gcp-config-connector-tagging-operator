@@ -317,6 +317,7 @@ func ownerIndexValue(apiVersion string, kind string, name string) string {
 }
 
 // handleTagBindingsDeletion handles the deletion of tag bindings when a resource is being deleted.
+// Returns error if deletion is still in progress to trigger requeue
 func (r *TaggableResourceReconciler[T, P, PT]) handleTagBindingsDeletion(ctx context.Context, resource PT) error {
 	log := log.FromContext(ctx)
 
@@ -329,22 +330,29 @@ func (r *TaggableResourceReconciler[T, P, PT]) handleTagBindingsDeletion(ctx con
 		return err
 	}
 
+	// If no tag bindings exist, we're done
+	if len(boundTags.Items) == 0 {
+		return nil
+	}
+
+	// Delete any remaining tag bindings
 	for _, tagBinding := range boundTags.Items {
-		// Delete the tag binding directly
+		// Skip if already being deleted
+		if !tagBinding.DeletionTimestamp.IsZero() {
+			continue
+		}
+
 		log.Info("deleting tag binding", "name", tagBinding.Name)
 		if err := r.Delete(ctx, &tagBinding); err != nil {
 			if !errors.IsNotFound(err) {
 				return fmt.Errorf("error deleting tag binding %s: %w", tagBinding.Name, err)
 			}
 		}
-		// Cleanup finalizer
-		controllerutil.RemoveFinalizer(&tagBinding, "cnrm.cloud.google.com/finalizer")
-		if err := r.Update(ctx, &tagBinding); err != nil {
-			return fmt.Errorf("error removing finalizer from resource %s: %w", tagBinding.Name, err)
-		}
 	}
 
-	return nil
+	// Return error to requeue if any tag bindings still exist
+	// This ensures we wait for all tag bindings to be fully deleted
+	return fmt.Errorf("waiting for tag bindings to be deleted")
 }
 
 func (r *TaggableResourceReconciler[T, P, PT]) getValueAndKeyID(ctx context.Context, projectID, key, value string) (string, string, error) {
