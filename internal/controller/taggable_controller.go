@@ -318,33 +318,54 @@ func ownerIndexValue(apiVersion string, kind string, name string) string {
 
 // handleTagBindingsDeletion handles the deletion of tag bindings when a resource is being deleted.
 func (r *TaggableResourceReconciler[T, P, PT]) handleTagBindingsDeletion(ctx context.Context, resource PT) error {
-	log := log.FromContext(ctx)
+	log := log.FromContext(ctx).WithValues(
+		"resource", resource.GetName(),
+		"namespace", resource.GetNamespace(),
+	)
 
 	gvk := resource.GetObjectKind().GroupVersionKind()
 	ownerIndex := ownerIndexValue(gvk.GroupVersion().String(), gvk.Kind, resource.GetName())
 
 	var boundTags tagsv1alpha1.TagsLocationTagBindingList
 	if err := r.List(ctx, &boundTags, client.InNamespace(resource.GetNamespace()), client.MatchingFields{tagBindingOwnerKey: ownerIndex}); err != nil {
-		log.Error(err, "unable to list bound tags")
-		return err
+		log.Error(err, "failed to list bound tags")
+		return fmt.Errorf("failed to list bound tags: %w", err)
 	}
 
+	var err error
 	for _, tagBinding := range boundTags.Items {
-		// Delete the tag binding directly
-		log.Info("deleting tag binding", "name", tagBinding.Name)
-		if err := r.Delete(ctx, &tagBinding); err != nil {
-			if !errors.IsNotFound(err) {
-				return fmt.Errorf("error deleting tag binding %s: %w", tagBinding.Name, err)
+		// Skip if tag binding is already being deleted
+		if !tagBinding.ObjectMeta.DeletionTimestamp.IsZero() {
+			continue
+		}
+
+		// Remove all finalizers in a single operation
+		finalizers := []string{"cnrm.cloud.google.com/finalizer", "cnrm.cloud.google.com/deletion-defender"}
+		modified := false
+		for _, f := range finalizers {
+			if controllerutil.ContainsFinalizer(&tagBinding, f) {
+				controllerutil.RemoveFinalizer(&tagBinding, f)
+				modified = true
 			}
 		}
-		// Cleanup finalizer
-		controllerutil.RemoveFinalizer(&tagBinding, "cnrm.cloud.google.com/finalizer")
-		if err := r.Update(ctx, &tagBinding); err != nil {
-			return fmt.Errorf("error removing finalizer from resource %s: %w", tagBinding.Name, err)
+
+		if modified {
+			if updateErr := r.Update(ctx, &tagBinding); updateErr != nil && !errors.IsNotFound(updateErr) {
+				log.Error(updateErr, "failed to remove finalizers", "tagBinding", tagBinding.Name)
+				err = fmt.Errorf("failed to remove finalizers from %s: %w", tagBinding.Name, updateErr)
+				continue
+			}
+		}
+
+		// Delete the tag binding
+		log.Info("deleting tag binding", "name", tagBinding.Name)
+		if deleteErr := r.Delete(ctx, &tagBinding); deleteErr != nil && !errors.IsNotFound(deleteErr) {
+			log.Error(deleteErr, "failed to delete tag binding", "tagBinding", tagBinding.Name)
+			err = fmt.Errorf("failed to delete tag binding %s: %w", tagBinding.Name, deleteErr)
 		}
 	}
 
-	return nil
+	return err
 }
 
 func (r *TaggableResourceReconciler[T, P, PT]) getValueAndKeyID(ctx context.Context, projectID, key, value string) (string, string, error) {
