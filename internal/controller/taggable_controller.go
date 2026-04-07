@@ -93,14 +93,24 @@ func (r *TaggableResourceReconciler[T, P, PT]) Reconcile(ctx context.Context, re
 				// If there's an error handling tag bindings, requeue for later
 				return ctrl.Result{Requeue: true, RequeueAfter: 10 * time.Second}, err
 			}
+
+			// resource in the API server may have changed
+			// fetch resource's latest state
+			latestResource := r.newPT()
+			if err := r.Get(ctx, req.NamespacedName, latestResource); err != nil {
+				return ctrl.Result{}, client.IgnoreNotFound(err)
+			}
+			patchBase := client.MergeFrom(latestResource.DeepCopyObject().(client.Object))
+
 			// Remove finalizer to allow Kubernetes to delete the resource
-			controllerutil.RemoveFinalizer(resource, taggableResourceFinalizer)
-			if err := r.Update(ctx, resource); err != nil {
+			// Patch this change in K8s API server
+			controllerutil.RemoveFinalizer(latestResource, taggableResourceFinalizer)
+			if err := r.Patch(ctx, latestResource, patchBase); err != nil {
 				return ctrl.Result{}, err
 			}
 			log.Info("resource deletion request received trying to delete associated tagValue/tagKey if unused")
-			projectID := r.determineProjectID(ctx, resource)
-			labels := resource.GetLabels()
+			projectID := r.determineProjectID(ctx, latestResource)
+			labels := latestResource.GetLabels()
 			for k, v := range r.LabelMatcher(labels) {
 				// return tagValue.Name, tagKey.Name, nil
 				valueID, keyID, err := r.getValueAndKeyID(ctx, projectID, k, v)
@@ -121,8 +131,11 @@ func (r *TaggableResourceReconciler[T, P, PT]) Reconcile(ctx context.Context, re
 	}
 
 	if !controllerutil.ContainsFinalizer(resource, taggableResourceFinalizer) {
+		patchBase := client.MergeFrom(resource.DeepCopyObject().(client.Object))
 		controllerutil.AddFinalizer(resource, taggableResourceFinalizer)
-		if err := r.Update(ctx, resource); err != nil {
+
+		// Patch only this change in K8s API server
+		if err := r.Patch(ctx, resource, patchBase); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
