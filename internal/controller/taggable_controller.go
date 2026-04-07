@@ -131,10 +131,17 @@ func (r *TaggableResourceReconciler[T, P, PT]) Reconcile(ctx context.Context, re
 	}
 
 	if !controllerutil.ContainsFinalizer(resource, taggableResourceFinalizer) {
-		patchBase := client.MergeFrom(resource.DeepCopyObject().(client.Object))
-		controllerutil.AddFinalizer(resource, taggableResourceFinalizer)
+		// resource in the API server may have changed
+		// fetch resource's latest state
+		latestResource := r.newPT()
+		if err := r.Get(ctx, req.NamespacedName, latestResource); err != nil {
+			return ctrl.Result{}, client.IgnoreNotFound(err)
+		}
+		patchBase := client.MergeFrom(latestResource.DeepCopyObject().(client.Object))
 
-		// Patch only this change in K8s API server
+		controllerutil.AddFinalizer(latestResource, taggableResourceFinalizer)
+
+		// Patch this change in K8s API server
 		if err := r.Patch(ctx, resource, patchBase); err != nil {
 			return ctrl.Result{}, err
 		}
