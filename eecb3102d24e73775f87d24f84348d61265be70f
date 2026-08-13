@@ -1,0 +1,19 @@
+.codacy.yml
+  s_842b34926b7032::t_a5968a50327e2b 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "eecb3102d24e73775f87d24f84348d61265be70f",
+  "prompts": {},
+  "sessions": {
+    "s_842b34926b7032": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "378dc19c-83ee-415b-84b0-657152b0ab47",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "herogen-agent <herogen.agent_svc@deliveryhero.com>"
+    }
+  }
+}
