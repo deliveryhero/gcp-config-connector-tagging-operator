@@ -1,0 +1,39 @@
+internal/controller/taggable_controller_test.go
+  s_3c5d928dcfe33e::t_e350ab42ca950e 220-222
+  s_3c5d928dcfe33e::t_d2fd8b66668e0d 20-22,28,30,34,36
+  s_3c5d928dcfe33e::t_956a4e2bce1fdb 26
+  s_3c5d928dcfe33e::t_897c8e96b2376b 150-219,223
+internal/gcp/tags.go
+  s_3c5d928dcfe33e::t_86a5e988b172c1 184,187,205
+  s_3c5d928dcfe33e::t_4c426d455397d4 42-43
+  s_3c5d928dcfe33e::t_9da77b427e92b2 209,212,227
+  s_3c5d928dcfe33e::t_1ea0f0ea085416 106,117
+  s_3c5d928dcfe33e::t_728c85f877a63c 65,76
+  s_3c5d928dcfe33e::t_cd24bb7f785358 147
+  s_3c5d928dcfe33e::t_2ea9b60aa6dce0 101
+  s_3c5d928dcfe33e::t_aa2f1a5fb44653 151-152,155-156
+internal/gcp/tags_test.go
+  s_3c5d928dcfe33e::t_ea2aabffd55bb6 72-254
+  s_3c5d928dcfe33e::t_f6d2ede45f49c7 331-334,337-340,343-346,349-352,358-359,366-370,373-377,380-384,387-391,394-398,404-405
+  s_3c5d928dcfe33e::t_e9320332b839d1 32,34
+internal/controller/taggable_controller.go
+  s_3c5d928dcfe33e::t_3d42e2a5e6f0f2 96,98-101,108,111,116-120
+  s_3c5d928dcfe33e::t_122a2ca45c0eb6 215,221,227,230,233-234
+  s_3c5d928dcfe33e::t_7cffcb2ef4f641 133-136
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "a9e4e2a673db4c60868a8b3fc0811064527de13e",
+  "prompts": {},
+  "sessions": {
+    "s_3c5d928dcfe33e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1c14036a-f152-41d8-9fec-1567dbce4e20",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "herogen-agent <herogen.agent_svc@deliveryhero.com>"
+    }
+  }
+}
