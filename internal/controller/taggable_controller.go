@@ -384,7 +384,6 @@ func (r *TaggableResourceReconciler[T, P, PT]) handleTagBindingsDeletion(ctx con
 	return err
 }
 
-
 func CreateTaggableResourceController[T any, P ResourceMetadataProvider[T], PT ResourcePointer[T]](mgr ctrl.Manager, tagsManager gcp.TagsManager, provider P, labelMatcher func(map[string]string) map[string]string) {
 	if err := (&TaggableResourceReconciler[T, P, PT]{
 		Client:           mgr.GetClient(),

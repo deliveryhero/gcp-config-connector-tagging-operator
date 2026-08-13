@@ -191,7 +191,6 @@ func TestLookupKey_PermissionDeniedDoesNotCreate(t *testing.T) {
 // TestLookupValue_NotFoundTriggersCreate verifies that a NotFound error causes auto-creation.
 func TestLookupValue_NotFoundTriggersCreate(t *testing.T) {
 	lis := bufconn.Listen(bufSize)
-	// Use fakeTagKeysServer so LookupKey succeeds for "existing-key", allowing CreateValue to proceed.
 	keysSrv := &fakeTagKeysServer{}
 	valuesSrv := &notFoundTagValuesServer{}
 	s := grpc.NewServer()
@@ -253,6 +252,70 @@ func TestLookupValue_PermissionDeniedDoesNotCreate(t *testing.T) {
 	_, err = mgr.LookupValue(ctx, "proj", "some-key", "some-value")
 	assert.Error(t, err, "expected an error on PermissionDenied")
 	assert.False(t, srv.createCalled, "CreateTagValue must NOT be called when PermissionDenied is returned")
+}
+
+// TestLookupKeyNoCreate_NotFoundReturnsNil verifies that NotFound returns nil without creating.
+func TestLookupKeyNoCreate_NotFoundReturnsNil(t *testing.T) {
+	lis := bufconn.Listen(bufSize)
+	srv := &notFoundTagKeysServer{}
+	s := grpc.NewServer()
+	resourcemanagerpb.RegisterTagKeysServer(s, srv)
+	go func() {
+		if err := s.Serve(lis); err != nil && err != grpc.ErrServerStopped {
+			t.Errorf("Server exited with error: %v", err)
+		}
+	}()
+	defer s.Stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(func(ctx context.Context, s string) (net.Conn, error) {
+		return bufDialer(lis)
+	}), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	assert.NoError(t, err)
+	defer conn.Close()
+
+	keysClient, err := resourcemanager.NewTagKeysClient(ctx, option.WithGRPCConn(conn))
+	assert.NoError(t, err)
+
+	mgr := NewTagsManager(keysClient, nil, nil)
+	key, err := mgr.LookupKeyNoCreate(ctx, "proj", "missing-key")
+	assert.NoError(t, err, "NotFound should not be an error for LookupKeyNoCreate")
+	assert.Nil(t, key, "expected nil key when not found")
+	assert.False(t, srv.createCalled, "CreateTagKey must NOT be called by LookupKeyNoCreate")
+}
+
+// TestLookupValueNoCreate_NotFoundReturnsNil verifies that NotFound returns nil without creating.
+func TestLookupValueNoCreate_NotFoundReturnsNil(t *testing.T) {
+	lis := bufconn.Listen(bufSize)
+	valuesSrv := &notFoundTagValuesServer{}
+	s := grpc.NewServer()
+	resourcemanagerpb.RegisterTagValuesServer(s, valuesSrv)
+	go func() {
+		if err := s.Serve(lis); err != nil && err != grpc.ErrServerStopped {
+			t.Errorf("Server exited with error: %v", err)
+		}
+	}()
+	defer s.Stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(func(ctx context.Context, s string) (net.Conn, error) {
+		return bufDialer(lis)
+	}), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	assert.NoError(t, err)
+	defer conn.Close()
+
+	valuesClient, err := resourcemanager.NewTagValuesClient(ctx, option.WithGRPCConn(conn))
+	assert.NoError(t, err)
+
+	mgr := NewTagsManager(nil, valuesClient, nil)
+	val, err := mgr.LookupValueNoCreate(ctx, "proj", "some-key", "missing-value")
+	assert.NoError(t, err, "NotFound should not be an error for LookupValueNoCreate")
+	assert.Nil(t, val, "expected nil value when not found")
+	assert.False(t, valuesSrv.createCalled, "CreateTagValue must NOT be called by LookupValueNoCreate")
 }
 
 func TestLookupKeyWithFakeGRPCServer(t *testing.T) {
