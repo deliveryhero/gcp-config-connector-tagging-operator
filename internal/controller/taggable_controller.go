@@ -93,28 +93,31 @@ func (r *TaggableResourceReconciler[T, P, PT]) Reconcile(ctx context.Context, re
 				// If there's an error handling tag bindings, requeue for later
 				return ctrl.Result{Requeue: true, RequeueAfter: 10 * time.Second}, err
 			}
-			// Remove finalizer to allow Kubernetes to delete the resource
-			controllerutil.RemoveFinalizer(resource, taggableResourceFinalizer)
-			if err := r.Update(ctx, resource); err != nil {
-				return ctrl.Result{}, err
-			}
+
 			log.Info("resource deletion request received trying to delete associated tagValue/tagKey if unused")
-			projectID := r.determineProjectID(ctx, resource)
+			projectID, err := r.determineProjectID(ctx, resource)
+			if err != nil {
+				return ctrl.Result{Requeue: true, RequeueAfter: 10 * time.Second}, err
+			}
 			labels := resource.GetLabels()
 			for k, v := range r.LabelMatcher(labels) {
-				// return tagValue.Name, tagKey.Name, nil
 				valueID, keyID, err := r.getValueAndKeyID(ctx, projectID, k, v)
 				if err != nil {
 					return ctrl.Result{Requeue: true, RequeueAfter: 10 * time.Second}, err
 				}
-				if err := r.TagsManager.DeleteValueIfUnused(ctx, projectID, keyID, valueID); err != nil {
+				if err := r.TagsManager.DeleteValueIfUnused(ctx, projectID, k, v, valueID); err != nil {
 					return ctrl.Result{Requeue: true, RequeueAfter: 10 * time.Second}, err
 				}
-				if err := r.TagsManager.DeleteKeyIfUnused(ctx, projectID, keyID); err != nil {
+				if err := r.TagsManager.DeleteKeyIfUnused(ctx, projectID, k, keyID); err != nil {
 					return ctrl.Result{Requeue: true, RequeueAfter: 10 * time.Second}, err
 				}
 			}
 
+			// Remove finalizer only after GCP cleanup succeeds
+			controllerutil.RemoveFinalizer(resource, taggableResourceFinalizer)
+			if err := r.Update(ctx, resource); err != nil {
+				return ctrl.Result{}, err
+			}
 		}
 		// Stop reconciliation as the resource is being deleted
 		return ctrl.Result{}, nil
@@ -127,7 +130,10 @@ func (r *TaggableResourceReconciler[T, P, PT]) Reconcile(ctx context.Context, re
 		}
 	}
 
-	projectID := r.determineProjectID(ctx, resource)
+	projectID, err := r.determineProjectID(ctx, resource)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 	gvk := resource.GetObjectKind().GroupVersionKind()
 	ownerIndex := ownerIndexValue(gvk.GroupVersion().String(), gvk.Kind, resource.GetName())
 
@@ -206,24 +212,26 @@ func (r *TaggableResourceReconciler[T, P, PT]) newPT() PT {
 	return (PT)(new(T))
 }
 
-func (r *TaggableResourceReconciler[T, P, PT]) determineProjectID(ctx context.Context, resource PT) string {
+func (r *TaggableResourceReconciler[T, P, PT]) determineProjectID(ctx context.Context, resource PT) (string, error) {
 	log := log.FromContext(ctx)
 
 	// TODO projectRef
 
 	if projectID, exists := resource.GetAnnotations()[projectIDAnnotation]; exists {
-		return projectID
+		return projectID, nil
 	}
 
 	var ns corev1.Namespace
 	if err := r.Get(ctx, types.NamespacedName{Name: resource.GetNamespace()}, &ns); err != nil {
 		log.Error(err, "unable to fetch namespace")
+		return "", fmt.Errorf("unable to fetch namespace %s: %w", resource.GetNamespace(), err)
 	}
 	if projectID, exists := ns.ObjectMeta.Annotations[projectIDAnnotation]; exists {
-		return projectID
+		return projectID, nil
 	}
 
-	return ns.Name
+	return "", fmt.Errorf("no GCP project ID found for resource %s/%s: set the %s annotation on the resource or its namespace",
+		resource.GetNamespace(), resource.GetName(), projectIDAnnotation)
 }
 
 func (r *TaggableResourceReconciler[T, P, PT]) generateBinding(resource PT, projectInfo *resourcemanagerpb.Project, tagValueID string) (*tagsv1alpha1.TagsLocationTagBinding, error) {

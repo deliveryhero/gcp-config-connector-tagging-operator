@@ -39,8 +39,8 @@ type TagsManager interface {
 	LookupValue(ctx context.Context, projectID string, key string, value string) (*resourcemanagerpb.TagValue, error)
 	CreateValue(ctx context.Context, projectID string, key string, value string) (*resourcemanagerpb.TagValue, error)
 	GetProjectInfo(ctx context.Context, projectID string) (*resourcemanagerpb.Project, error)
-	DeleteValueIfUnused(ctx context.Context, projectID string, key string, value string) error
-	DeleteKeyIfUnused(ctx context.Context, projectID string, key string) error
+	DeleteValueIfUnused(ctx context.Context, projectID string, shortKey string, shortValue string, resourceName string) error
+	DeleteKeyIfUnused(ctx context.Context, projectID string, shortKey string, resourceName string) error
 }
 
 type tagsManager struct {
@@ -62,7 +62,7 @@ func NewTagsManager(keysClient *resourcemanager.TagKeysClient, valuesClient *res
 }
 
 func (m *tagsManager) LookupKey(ctx context.Context, projectID string, key string) (*resourcemanagerpb.TagKey, error) {
-	cacheKey := cacheKeyTagKey(key)
+	cacheKey := cacheKeyTagKey(projectID, key)
 	cachedKey, found := m.cache.Get(cacheKey)
 	if found {
 		return cachedKey.(*resourcemanagerpb.TagKey), nil
@@ -73,7 +73,7 @@ func (m *tagsManager) LookupKey(ctx context.Context, projectID string, key strin
 	})
 	if err != nil {
 		var ae *apierror.APIError
-		if errors.As(err, &ae) && ae.GRPCStatus().Code() == codes.PermissionDenied {
+		if errors.As(err, &ae) && ae.GRPCStatus().Code() == codes.NotFound {
 			return m.CreateKey(ctx, projectID, key)
 		}
 		return nil, fmt.Errorf("failed to lookup tag key: %w", err)
@@ -98,12 +98,12 @@ func (m *tagsManager) CreateKey(ctx context.Context, projectID string, key strin
 		return nil, fmt.Errorf("failed to wait for tag key creation: %w", err)
 	}
 
-	m.cache.Set(cacheKeyTagKey(key), tagKey, tagCacheDuration)
+	m.cache.Set(cacheKeyTagKey(projectID, key), tagKey, tagCacheDuration)
 	return tagKey, nil
 }
 
 func (m *tagsManager) LookupValue(ctx context.Context, projectID string, key string, value string) (*resourcemanagerpb.TagValue, error) {
-	cacheKey := cacheKeyTagValue(key, value)
+	cacheKey := cacheKeyTagValue(projectID, key, value)
 	cachedValue, found := m.cache.Get(cacheKey)
 	if found {
 		return cachedValue.(*resourcemanagerpb.TagValue), nil
@@ -114,7 +114,7 @@ func (m *tagsManager) LookupValue(ctx context.Context, projectID string, key str
 	})
 	if err != nil {
 		var ae *apierror.APIError
-		if errors.As(err, &ae) && ae.GRPCStatus().Code() == codes.PermissionDenied {
+		if errors.As(err, &ae) && ae.GRPCStatus().Code() == codes.NotFound {
 			return m.CreateValue(ctx, projectID, key, value)
 		}
 		return nil, fmt.Errorf("failed to lookup tag value: %w", err)
@@ -144,16 +144,16 @@ func (m *tagsManager) CreateValue(ctx context.Context, projectID string, key str
 		return nil, fmt.Errorf("failed to wait for tag value creation: %w", err)
 	}
 
-	m.cache.Set(cacheKeyTagValue(key, value), tagValue, tagCacheDuration)
+	m.cache.Set(cacheKeyTagValue(projectID, key, value), tagValue, tagCacheDuration)
 	return tagValue, nil
 }
 
-func cacheKeyTagKey(key string) string {
-	return fmt.Sprintf("key:%s", key)
+func cacheKeyTagKey(projectID string, key string) string {
+	return fmt.Sprintf("key:%s:%s", projectID, key)
 }
 
-func cacheKeyTagValue(key string, value string) string {
-	return fmt.Sprintf("value:%s:%s", key, value)
+func cacheKeyTagValue(projectID string, key string, value string) string {
+	return fmt.Sprintf("value:%s:%s:%s", projectID, key, value)
 }
 
 func (m *tagsManager) GetProjectInfo(ctx context.Context, projectID string) (*resourcemanagerpb.Project, error) {
@@ -181,10 +181,10 @@ func (m *tagsManager) GetProjectInfo(ctx context.Context, projectID string) (*re
 	return project, nil
 }
 
-func (m *tagsManager) DeleteValueIfUnused(ctx context.Context, projectID string, key string, value string) error {
+func (m *tagsManager) DeleteValueIfUnused(ctx context.Context, projectID string, shortKey string, shortValue string, resourceName string) error {
 
 	req := &resourcemanagerpb.DeleteTagValueRequest{
-		Name: value,
+		Name: resourceName,
 	}
 
 	op, err := m.valuesClient.DeleteTagValue(ctx, req)
@@ -202,15 +202,14 @@ func (m *tagsManager) DeleteValueIfUnused(ctx context.Context, projectID string,
 		return fmt.Errorf("failed to delete the tagValue %w", err)
 	}
 
-	m.cache.Delete(cacheKeyTagValue(key, value))
+	m.cache.Delete(cacheKeyTagValue(projectID, shortKey, shortValue))
 	return nil
 }
 
-func (m *tagsManager) DeleteKeyIfUnused(ctx context.Context, projectID string, key string) error {
+func (m *tagsManager) DeleteKeyIfUnused(ctx context.Context, projectID string, shortKey string, resourceName string) error {
 
-	// Attempt to delete the tag key
 	req := &resourcemanagerpb.DeleteTagKeyRequest{
-		Name: key,
+		Name: resourceName,
 	}
 	op, err := m.keysClient.DeleteTagKey(ctx, req)
 	if err != nil {
@@ -225,6 +224,6 @@ func (m *tagsManager) DeleteKeyIfUnused(ctx context.Context, projectID string, k
 	if err != nil {
 		return fmt.Errorf("failed to delete the tagKey %w", err)
 	}
-	m.cache.Delete(cacheKeyTagKey(key))
+	m.cache.Delete(cacheKeyTagKey(projectID, shortKey))
 	return nil
 }

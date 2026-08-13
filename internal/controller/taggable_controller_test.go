@@ -17,15 +17,23 @@ limitations under the License.
 package controller
 
 import (
+	"context"
+	"testing"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
 	tagsv1alpha1 "github.com/GoogleCloudPlatform/k8s-config-connector/pkg/clients/generated/apis/tags/v1alpha1"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("Taggable Resource Controller", func() {
@@ -138,6 +146,80 @@ var _ = Describe("Taggable Resource Controller", func() {
 		}
 	})
 })
+
+func TestDetermineProjectID(t *testing.T) {
+	tests := []struct {
+		name              string
+		resourceAnnotations map[string]string
+		nsAnnotations     map[string]string
+		resourceNamespace string
+		wantProjectID     string
+		wantErr           bool
+	}{
+		{
+			name:              "project ID from resource annotation",
+			resourceAnnotations: map[string]string{projectIDAnnotation: "resource-project"},
+			resourceNamespace: "my-ns",
+			wantProjectID:     "resource-project",
+		},
+		{
+			name:              "project ID from namespace annotation",
+			resourceAnnotations: map[string]string{},
+			nsAnnotations:     map[string]string{projectIDAnnotation: "ns-project"},
+			resourceNamespace: "my-ns",
+			wantProjectID:     "ns-project",
+		},
+		{
+			name:              "no project ID annotation returns error",
+			resourceAnnotations: map[string]string{},
+			nsAnnotations:     map[string]string{},
+			resourceNamespace: "my-ns",
+			wantErr:           true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ns := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        tt.resourceNamespace,
+					Annotations: tt.nsAnnotations,
+				},
+			}
+			fakeClient := fake.NewClientBuilder().
+				WithScheme(scheme.Scheme).
+				WithObjects(ns).
+				Build()
+
+			resource := &MockObject{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "test-resource",
+					Namespace:   tt.resourceNamespace,
+					Annotations: tt.resourceAnnotations,
+				},
+			}
+
+			reconciler := &TaggableResourceReconciler[MockObject, *mockMetadataProvider, *MockObject]{
+				Client: fakeClient,
+			}
+
+			projectID, err := reconciler.determineProjectID(context.Background(), resource)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.wantProjectID, projectID)
+			}
+		})
+	}
+}
+
+type mockMetadataProvider struct{}
+
+func (m *mockMetadataProvider) GetResourceLocation(r *MockObject) string { return "" }
+func (m *mockMetadataProvider) GetResourceID(projectInfo *resourcemanagerpb.Project, r *MockObject) string {
+	return ""
+}
 
 type MockObject struct {
 	mock.Mock
