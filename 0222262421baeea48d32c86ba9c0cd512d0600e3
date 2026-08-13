@@ -1,0 +1,28 @@
+internal/controller/taggable_controller.go
+  s_3c5d928dcfe33e::t_d1d7bff0365b0f 104,108-109,112-120
+internal/gcp/tags.go
+  s_3c5d928dcfe33e::t_a2c1979a4d3c1c 273-276
+  s_3c5d928dcfe33e::t_54d5782a0c5eec 150-170
+  s_3c5d928dcfe33e::t_80b95e550ac71d 88-108
+  s_3c5d928dcfe33e::t_85429295b8733a 38,41
+  s_3c5d928dcfe33e::t_4003c51b6ef4b2 246-249
+internal/gcp/tags_test.go
+  s_3c5d928dcfe33e::t_90b561d43095ad 102,110
+  s_3c5d928dcfe33e::t_6ecfcfa58e954a 194-195,222,224
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "0222262421baeea48d32c86ba9c0cd512d0600e3",
+  "prompts": {},
+  "sessions": {
+    "s_3c5d928dcfe33e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1c14036a-f152-41d8-9fec-1567dbce4e20",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "herogen-agent <herogen.agent_svc@deliveryhero.com>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+hack/verify-git-clean.sh
+  s_e4a7e45dd3bce2::t_a72fc190a8c3aa 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "a34ddc7a5969dd78467fc4481ae6f40930299dbb",
+  "prompts": {},
+  "sessions": {
+    "s_e4a7e45dd3bce2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ff92bced-b39a-426d-9ed8-6e63615328de",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "herogen-agent <herogen.agent_svc@deliveryhero.com>"
+    }
+  }
+}
