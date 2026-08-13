@@ -1,0 +1,19 @@
+Makefile
+  s_e4a7e45dd3bce2::t_194aa893441cd2 85-86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "6d5e0700a8bda43a106a33861f59158189fc894d",
+  "prompts": {},
+  "sessions": {
+    "s_e4a7e45dd3bce2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ff92bced-b39a-426d-9ed8-6e63615328de",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "herogen-agent <herogen.agent_svc@deliveryhero.com>"
+    }
+  }
+}
