@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	longrunningpb "cloud.google.com/go/longrunning/autogen/longrunningpb"
 	resourcemanager "cloud.google.com/go/resourcemanager/apiv3"
 	"cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
 	"github.com/stretchr/testify/assert"
@@ -78,7 +79,7 @@ func (s *notFoundTagKeysServer) GetNamespacedTagKey(ctx context.Context, req *re
 	return nil, status.Error(codes.NotFound, "tag key not found")
 }
 
-func (s *notFoundTagKeysServer) CreateTagKey(ctx context.Context, req *resourcemanagerpb.CreateTagKeyRequest) (*resourcemanagerpb.Operation, error) {
+func (s *notFoundTagKeysServer) CreateTagKey(ctx context.Context, req *resourcemanagerpb.CreateTagKeyRequest) (*longrunningpb.Operation, error) {
 	s.createCalled = true
 	return nil, status.Error(codes.Internal, "create not implemented in test")
 }
@@ -92,7 +93,7 @@ func (s *permissionDeniedTagKeysServer) GetNamespacedTagKey(ctx context.Context,
 	return nil, status.Error(codes.PermissionDenied, "permission denied")
 }
 
-func (s *permissionDeniedTagKeysServer) CreateTagKey(ctx context.Context, req *resourcemanagerpb.CreateTagKeyRequest) (*resourcemanagerpb.Operation, error) {
+func (s *permissionDeniedTagKeysServer) CreateTagKey(ctx context.Context, req *resourcemanagerpb.CreateTagKeyRequest) (*longrunningpb.Operation, error) {
 	s.createCalled = true
 	return nil, status.Error(codes.Internal, "create not implemented in test")
 }
@@ -106,7 +107,7 @@ func (s *notFoundTagValuesServer) GetNamespacedTagValue(ctx context.Context, req
 	return nil, status.Error(codes.NotFound, "tag value not found")
 }
 
-func (s *notFoundTagValuesServer) CreateTagValue(ctx context.Context, req *resourcemanagerpb.CreateTagValueRequest) (*resourcemanagerpb.Operation, error) {
+func (s *notFoundTagValuesServer) CreateTagValue(ctx context.Context, req *resourcemanagerpb.CreateTagValueRequest) (*longrunningpb.Operation, error) {
 	s.createCalled = true
 	return nil, status.Error(codes.Internal, "create not implemented in test")
 }
@@ -120,7 +121,7 @@ func (s *permissionDeniedTagValuesServer) GetNamespacedTagValue(ctx context.Cont
 	return nil, status.Error(codes.PermissionDenied, "permission denied")
 }
 
-func (s *permissionDeniedTagValuesServer) CreateTagValue(ctx context.Context, req *resourcemanagerpb.CreateTagValueRequest) (*resourcemanagerpb.Operation, error) {
+func (s *permissionDeniedTagValuesServer) CreateTagValue(ctx context.Context, req *resourcemanagerpb.CreateTagValueRequest) (*longrunningpb.Operation, error) {
 	s.createCalled = true
 	return nil, status.Error(codes.Internal, "create not implemented in test")
 }
