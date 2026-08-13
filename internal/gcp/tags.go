@@ -35,8 +35,10 @@ const (
 
 type TagsManager interface {
 	LookupKey(ctx context.Context, projectID string, key string) (*resourcemanagerpb.TagKey, error)
+	LookupKeyNoCreate(ctx context.Context, projectID string, key string) (*resourcemanagerpb.TagKey, error)
 	CreateKey(ctx context.Context, projectID string, key string) (*resourcemanagerpb.TagKey, error)
 	LookupValue(ctx context.Context, projectID string, key string, value string) (*resourcemanagerpb.TagValue, error)
+	LookupValueNoCreate(ctx context.Context, projectID string, key string, value string) (*resourcemanagerpb.TagValue, error)
 	CreateValue(ctx context.Context, projectID string, key string, value string) (*resourcemanagerpb.TagValue, error)
 	GetProjectInfo(ctx context.Context, projectID string) (*resourcemanagerpb.Project, error)
 	DeleteValueIfUnused(ctx context.Context, projectID string, shortKey string, shortValue string, resourceName string) error
@@ -83,6 +85,27 @@ func (m *tagsManager) LookupKey(ctx context.Context, projectID string, key strin
 	return tagKey, nil
 }
 
+func (m *tagsManager) LookupKeyNoCreate(ctx context.Context, projectID string, key string) (*resourcemanagerpb.TagKey, error) {
+	cacheKey := cacheKeyTagKey(projectID, key)
+	if cached, found := m.cache.Get(cacheKey); found {
+		return cached.(*resourcemanagerpb.TagKey), nil
+	}
+
+	tagKey, err := m.keysClient.GetNamespacedTagKey(ctx, &resourcemanagerpb.GetNamespacedTagKeyRequest{
+		Name: fmt.Sprintf("%s/%s", projectID, key),
+	})
+	if err != nil {
+		var ae *apierror.APIError
+		if errors.As(err, &ae) && ae.GRPCStatus().Code() == codes.NotFound {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to lookup tag key: %w", err)
+	}
+
+	m.cache.Set(cacheKey, tagKey, tagCacheDuration)
+	return tagKey, nil
+}
+
 func (m *tagsManager) CreateKey(ctx context.Context, projectID string, key string) (*resourcemanagerpb.TagKey, error) {
 	op, err := m.keysClient.CreateTagKey(ctx, &resourcemanagerpb.CreateTagKeyRequest{
 		TagKey: &resourcemanagerpb.TagKey{
@@ -116,6 +139,27 @@ func (m *tagsManager) LookupValue(ctx context.Context, projectID string, key str
 		var ae *apierror.APIError
 		if errors.As(err, &ae) && ae.GRPCStatus().Code() == codes.NotFound {
 			return m.CreateValue(ctx, projectID, key, value)
+		}
+		return nil, fmt.Errorf("failed to lookup tag value: %w", err)
+	}
+
+	m.cache.Set(cacheKey, tagValue, tagCacheDuration)
+	return tagValue, nil
+}
+
+func (m *tagsManager) LookupValueNoCreate(ctx context.Context, projectID string, key string, value string) (*resourcemanagerpb.TagValue, error) {
+	cacheKey := cacheKeyTagValue(projectID, key, value)
+	if cached, found := m.cache.Get(cacheKey); found {
+		return cached.(*resourcemanagerpb.TagValue), nil
+	}
+
+	tagValue, err := m.valuesClient.GetNamespacedTagValue(ctx, &resourcemanagerpb.GetNamespacedTagValueRequest{
+		Name: fmt.Sprintf("%s/%s/%s", projectID, key, value),
+	})
+	if err != nil {
+		var ae *apierror.APIError
+		if errors.As(err, &ae) && ae.GRPCStatus().Code() == codes.NotFound {
+			return nil, nil
 		}
 		return nil, fmt.Errorf("failed to lookup tag value: %w", err)
 	}
@@ -199,6 +243,10 @@ func (m *tagsManager) DeleteValueIfUnused(ctx context.Context, projectID string,
 
 	_, err = op.Wait(ctx)
 	if err != nil {
+		var ae *apierror.APIError
+		if errors.As(err, &ae) && (ae.GRPCStatus().Code() == codes.FailedPrecondition || ae.GRPCStatus().Code() == codes.NotFound) {
+			return nil
+		}
 		return fmt.Errorf("failed to delete the tagValue %w", err)
 	}
 
@@ -222,6 +270,10 @@ func (m *tagsManager) DeleteKeyIfUnused(ctx context.Context, projectID string, s
 
 	_, err = op.Wait(ctx)
 	if err != nil {
+		var ae *apierror.APIError
+		if errors.As(err, &ae) && (ae.GRPCStatus().Code() == codes.FailedPrecondition || ae.GRPCStatus().Code() == codes.NotFound) {
+			return nil
+		}
 		return fmt.Errorf("failed to delete the tagKey %w", err)
 	}
 	m.cache.Delete(cacheKeyTagKey(projectID, shortKey))

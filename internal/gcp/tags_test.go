@@ -99,6 +99,7 @@ func (s *permissionDeniedTagKeysServer) CreateTagKey(ctx context.Context, req *r
 
 type notFoundTagValuesServer struct {
 	resourcemanagerpb.UnimplementedTagValuesServer
+	createCalled bool
 }
 
 func (s *notFoundTagValuesServer) GetNamespacedTagValue(ctx context.Context, req *resourcemanagerpb.GetNamespacedTagValueRequest) (*resourcemanagerpb.TagValue, error) {
@@ -106,6 +107,7 @@ func (s *notFoundTagValuesServer) GetNamespacedTagValue(ctx context.Context, req
 }
 
 func (s *notFoundTagValuesServer) CreateTagValue(ctx context.Context, req *resourcemanagerpb.CreateTagValueRequest) (*resourcemanagerpb.Operation, error) {
+	s.createCalled = true
 	return nil, status.Error(codes.Internal, "create not implemented in test")
 }
 
@@ -189,7 +191,8 @@ func TestLookupKey_PermissionDeniedDoesNotCreate(t *testing.T) {
 // TestLookupValue_NotFoundTriggersCreate verifies that a NotFound error causes auto-creation.
 func TestLookupValue_NotFoundTriggersCreate(t *testing.T) {
 	lis := bufconn.Listen(bufSize)
-	keysSrv := &notFoundTagKeysServer{}
+	// Use fakeTagKeysServer so LookupKey succeeds for "existing-key", allowing CreateValue to proceed.
+	keysSrv := &fakeTagKeysServer{}
 	valuesSrv := &notFoundTagValuesServer{}
 	s := grpc.NewServer()
 	resourcemanagerpb.RegisterTagKeysServer(s, keysSrv)
@@ -216,9 +219,9 @@ func TestLookupValue_NotFoundTriggersCreate(t *testing.T) {
 	assert.NoError(t, err)
 
 	mgr := NewTagsManager(keysClient, valuesClient, nil)
-	// CreateTagValue requires LookupKey first; both will fail with Internal — but creation is attempted
-	_, err = mgr.LookupValue(ctx, "proj", "some-key", "new-value")
+	_, err = mgr.LookupValue(ctx, "test-project", "existing-key", "new-value")
 	assert.Error(t, err, "expected an error because CreateTagValue is not fully implemented in the test server")
+	assert.True(t, valuesSrv.createCalled, "CreateTagValue should have been called when NotFound is returned")
 }
 
 // TestLookupValue_PermissionDeniedDoesNotCreate verifies that PermissionDenied does NOT trigger auto-creation.
