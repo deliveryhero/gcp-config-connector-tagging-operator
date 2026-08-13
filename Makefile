@@ -82,8 +82,8 @@ lint: golangci-lint ## Run golangci-lint linter
 lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
 	$(GOLANGCI_LINT) run --fix
 
-.PHONE: verify
-verify: generate helm
+.PHONY: verify
+verify: generate
 	hack/verify-git-clean.sh
 
 ##@ Build
