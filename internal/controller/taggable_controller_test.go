@@ -149,32 +149,32 @@ var _ = Describe("Taggable Resource Controller", func() {
 
 func TestDetermineProjectID(t *testing.T) {
 	tests := []struct {
-		name              string
+		name                string
 		resourceAnnotations map[string]string
-		nsAnnotations     map[string]string
-		resourceNamespace string
-		wantProjectID     string
-		wantErr           bool
+		nsAnnotations       map[string]string
+		resourceNamespace   string
+		wantProjectID       string
+		wantErr             bool
 	}{
 		{
-			name:              "project ID from resource annotation",
+			name:                "project ID from resource annotation",
 			resourceAnnotations: map[string]string{projectIDAnnotation: "resource-project"},
-			resourceNamespace: "my-ns",
-			wantProjectID:     "resource-project",
+			resourceNamespace:   "my-ns",
+			wantProjectID:       "resource-project",
 		},
 		{
-			name:              "project ID from namespace annotation",
+			name:                "project ID from namespace annotation",
 			resourceAnnotations: map[string]string{},
-			nsAnnotations:     map[string]string{projectIDAnnotation: "ns-project"},
-			resourceNamespace: "my-ns",
-			wantProjectID:     "ns-project",
+			nsAnnotations:       map[string]string{projectIDAnnotation: "ns-project"},
+			resourceNamespace:   "my-ns",
+			wantProjectID:       "ns-project",
 		},
 		{
-			name:              "no project ID annotation returns error",
+			name:                "no project ID annotation returns error",
 			resourceAnnotations: map[string]string{},
-			nsAnnotations:     map[string]string{},
-			resourceNamespace: "my-ns",
-			wantErr:           true,
+			nsAnnotations:       map[string]string{},
+			resourceNamespace:   "my-ns",
+			wantErr:             true,
 		},
 	}
 
