@@ -1,0 +1,20 @@
+internal/gcp/tags_test.go
+  s_e4a7e45dd3bce2::t_4b0dacbdd7af46 82,96,110,124
+  s_e4a7e45dd3bce2::t_0d03848afb1db0 27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "0ec0d3c6e2f9510400a9ff8ce303c2e6ceb3176d",
+  "prompts": {},
+  "sessions": {
+    "s_e4a7e45dd3bce2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ff92bced-b39a-426d-9ed8-6e63615328de",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "herogen-agent <herogen.agent_svc@deliveryhero.com>"
+    }
+  }
+}

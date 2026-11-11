@@ -1,0 +1,21 @@
+internal/controller/taggable_controller_test.go
+  s_e4a7e45dd3bce2::t_fbec7acc42d333 152,154-157,160,162-163,166,168-170,173,175-177
+go.mod
+  s_e4a7e45dd3bce2::t_db0c65ae084fda 46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "da2430310a7e103785ad582eec0060ff22068c8d",
+  "prompts": {},
+  "sessions": {
+    "s_e4a7e45dd3bce2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ff92bced-b39a-426d-9ed8-6e63615328de",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "herogen-agent <herogen.agent_svc@deliveryhero.com>"
+    }
+  }
+}

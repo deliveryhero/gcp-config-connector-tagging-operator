@@ -1,0 +1,30 @@
+internal/gcp/tags_test.go
+  s_3508e975f40aae::t_9db42383a7b518 102,110
+  s_3508e975f40aae::t_39f2d8e14a38fe 257-320
+  s_3508e975f40aae::t_58c1ace8f45b86 194,221,223
+internal/gcp/tags.go
+  s_3508e975f40aae::t_d1e8f6ed43e64b 279-282
+  s_3508e975f40aae::t_0780fd552aabbb 38,41
+  s_3508e975f40aae::t_912b8e2f88cfa7 88-111
+  s_3508e975f40aae::t_4f33a4ebb21d68 153-176
+  s_3508e975f40aae::t_ca8c367c595866 252-255
+internal/controller/taggable_controller.go
+  s_3508e975f40aae::t_e4040bfa972dab 397-422
+  s_3508e975f40aae::t_2316eaea3bb43e 104,108-111,113-116
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "016402c6ca3d442e951d6fbe4fcbdb3dfec07965",
+  "prompts": {},
+  "sessions": {
+    "s_3508e975f40aae": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "295272f4-803c-43c1-aca7-5f7194b752b4",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "herogen-agent <herogen.agent_svc@deliveryhero.com>"
+    }
+  }
+}
