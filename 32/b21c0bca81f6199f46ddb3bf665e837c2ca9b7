@@ -1,0 +1,19 @@
+Makefile
+  s_ccd369a1983f97::t_7139546b646cdc 220
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "32b21c0bca81f6199f46ddb3bf665e837c2ca9b7",
+  "prompts": {},
+  "sessions": {
+    "s_ccd369a1983f97": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "931fab11-819d-41a7-8d4c-ef29e22ea715",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "jijinp <jijin.puthuvakkattil@deliveryhero.com>"
+    }
+  }
+}
