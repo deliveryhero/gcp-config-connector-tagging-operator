@@ -1,6 +1,6 @@
 module github.com/deliveryhero/gcp-config-connector-tagging-operator
 
-go 1.22.0
+go 1.26.10
 
 require (
 	cloud.google.com/go/resourcemanager v1.10.0
